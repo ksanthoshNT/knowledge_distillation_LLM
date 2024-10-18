@@ -11,7 +11,6 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
                   --node_rank $NODE_RANK \
                   --master_addr $MASTER_ADDR \
                   --master_port $MASTER_PORT"
-
 # model
 BASE_PATH=${1-"/home/MiniLLM"}
 CKPT_NAME="llama-7B"
