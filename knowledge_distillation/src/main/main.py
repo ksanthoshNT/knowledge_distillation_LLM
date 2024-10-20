@@ -127,7 +127,6 @@ class KnowledgeDistillation:
             self.student_model.to(device)
 
         optimizer = torch.optim.AdamW(self.student_model.parameters(), lr=learning_rate)
-        perplexity = load("perplexity")
 
         self.student_model.gradient_checkpointing_enable()  # Enable gradient checkpointing
 
@@ -161,30 +160,41 @@ class KnowledgeDistillation:
             print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {avg_loss:.4f}")
 
             # Evaluation
-            eval_loss = self._evaluate()
-            perplexity_score = perplexity.compute(predictions=self.student_model, model_id=self.teacher_model_name)
+            eval_loss, perplexity = self._evaluate()
 
             print(f"Evaluation Loss: {eval_loss:.4f}")
-            print(f"Perplexity: {perplexity_score['perplexity']:.4f}")
+            print(f"Perplexity: {perplexity:.4f}")
 
         print("Training completed.")
 
     def _evaluate(self):
         self.student_model.eval()
-        eval_loss = 0
-        eval_steps = 0
+        total_loss = 0
+        num_batches = 0
+        all_logits = []
+        all_labels = []
         device = next(self.student_model.parameters()).device
 
-        for batch in tqdm(self.dataloader, desc="Evaluating"):
-            batch = {k: v.to(device) for k, v in batch.items()}
-
-            with torch.no_grad():
+        with torch.no_grad():
+            for batch in tqdm(self.dataloader, desc="Evaluating"):
+                batch = {k: v.to(device) for k, v in batch.items()}
                 outputs = self.student_model(**batch)
 
-            eval_loss += outputs.loss.item()
-            eval_steps += 1
+                loss = outputs.loss
+                total_loss += loss.item()
+                num_batches += 1
 
-        return eval_loss / eval_steps
+                all_logits.append(outputs.logits.detach().cpu())
+                all_labels.append(batch['labels'].detach().cpu())
+
+        avg_loss = total_loss / num_batches if num_batches > 0 else 0
+
+        # Compute perplexity
+        all_logits = torch.cat(all_logits, dim=0)
+        all_labels = torch.cat(all_labels, dim=0)
+        perplexity = torch.exp(F.cross_entropy(all_logits.view(-1, all_logits.size(-1)), all_labels.view(-1)))
+
+        return avg_loss, perplexity.item()
 
     def save_model(self, output_dir="distilled_model"):
         print(f"Saving distilled model to {output_dir}...")
