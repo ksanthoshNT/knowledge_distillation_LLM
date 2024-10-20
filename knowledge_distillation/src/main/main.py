@@ -91,6 +91,7 @@ class KnowledgeDistillation:
     def load_dataset(self, streaming=True):
         print("Loading dataset...")
         self.dataset = load_dataset(self.dataset_name, self.dataset_config, split="train", streaming=streaming)
+        print(self.dataset)
         print("Dataset loaded successfully.")
 
     def prepare_data(self, batch_size=2, max_length=128, num_samples=None):
@@ -120,9 +121,6 @@ class KnowledgeDistillation:
             self.dataset = self.dataset.map(preprocess_function, batched=True, remove_columns=self.dataset.column_names)
 
         self.dataloader = DataLoader(self.dataset, batch_size=batch_size, shuffle=False)
-        for x in self.dataloader:
-            print(x)
-        exit()
         print(f"Data preparation completed. Using {num_samples if num_samples is not None else 'all'} samples.")
 
     def train(self, num_epochs=3, learning_rate=1e-5, temperature=0.5, max_grad_norm=1.0):
@@ -265,13 +263,13 @@ def main():
     print_arguments(args)
 
     kd = KnowledgeDistillation(args.teacher_model_name, args.dataset_name, args.dataset_config_name)
+    kd.load_dataset(streaming=args.streaming)
     kd.load_teacher_model()  # Load teacher in 8-bit quantization
     kd.load_student_model(
         student_model_name=args.student_model_name,
         precision=args.student_precision,
         load_weights=args.load_student_weights
     )
-    kd.load_dataset(streaming=args.streaming)
     kd.prepare_data(batch_size=args.batch_size, max_length=args.max_length, num_samples=args.num_samples)
     kd.train(num_epochs=args.num_epochs, learning_rate=args.learning_rate, temperature=args.temperature,
              max_grad_norm=args.max_grad_norm)
