@@ -21,8 +21,15 @@ class KnowledgeDistillation:
         self.dataset = None
         self.dataloader = None
 
-    def load_teacher_model(self, use_8bit=False):
+    def load_teacher_model(self, use_8bit=False,precision="float16"):
         print("Loading teacher model...")
+
+        if precision == "float16":
+            dtype = torch.float16
+        elif precision == "float32":
+            dtype = torch.float32
+        else:
+            raise ValueError("Precision must be either 'float16' or 'float32'")
         if use_8bit:
             self.teacher_model = AutoModelForCausalLM.from_pretrained(
                 self.teacher_model_name,
@@ -33,7 +40,7 @@ class KnowledgeDistillation:
             self.teacher_model = AutoModelForCausalLM.from_pretrained(
                 self.teacher_model_name,
                 device_map="auto",
-                torch_dtype=torch.float32
+                torch_dtype=dtype
             )
         self.tokenizer = AutoTokenizer.from_pretrained(self.teacher_model_name)
 
@@ -275,6 +282,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description="Run Knowledge Distillation")
     parser.add_argument("--teacher_model_name", default="meta-llama/Llama-3.2-3B-Instruct",
                         help="Name of the teacher model")
+    parser.add_argument("--teacher_precision", default="float16", help="Precision to use for the student model")
+
     parser.add_argument("--dataset_name", default="wikitext", help="Name of the dataset")
     parser.add_argument("--dataset_config_name", default="wikitext-2-raw-v1", help="Configuration name of the dataset")
     parser.add_argument("--student_model_name", default="meta-llama/Llama-3.2-1B-Instruct",
@@ -305,7 +314,10 @@ def main():
 
     kd = KnowledgeDistillation(args.teacher_model_name, args.dataset_name, args.dataset_config_name)
     kd.load_dataset(streaming=args.streaming)
-    kd.load_teacher_model()  # Load teacher in 8-bit quantization
+    kd.load_teacher_model(
+        precision=args.teacher_precision,
+
+    )  # Load teacher in 8-bit quantization
     kd.load_student_model(
         student_model_name=args.student_model_name,
         precision=args.student_precision,
