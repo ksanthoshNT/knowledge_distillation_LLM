@@ -7,6 +7,7 @@ from datasets import load_dataset, IterableDataset
 from tqdm import tqdm
 from torch.nn import functional as F
 from evaluate import load
+from tabulate import tabulate
 
 
 class KnowledgeDistillation:
@@ -249,11 +250,16 @@ def parse_arguments():
     parser.add_argument("--max_grad_norm", type=float, default=1.0, help="Maximum gradient norm for training")
     return parser.parse_args()
 
+def print_arguments(args):
+    args_dict = vars(args)
+    table_data = [[k, v] for k, v in args_dict.items()]
+    print("\nKnowledge Distillation Arguments:")
+    print(tabulate(table_data, headers=["Argument", "Value"], tablefmt="grid"))
+    print()
 
 def main():
     args = parse_arguments()
-    print(args.streaming)
-    exit()
+    print_arguments(args)
 
     kd = KnowledgeDistillation(args.teacher_model_name, args.dataset_name, args.dataset_config_name)
     kd.load_teacher_model()  # Load teacher in 8-bit quantization
