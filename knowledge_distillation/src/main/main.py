@@ -123,7 +123,6 @@ class KnowledgeDistillation:
         print("Starting training...")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        # Only move the student model if it's not already on the correct device
         if next(self.student_model.parameters()).device != device:
             self.student_model.to(device)
 
@@ -135,6 +134,7 @@ class KnowledgeDistillation:
         for epoch in range(num_epochs):
             self.student_model.train()
             total_loss = 0
+            num_batches = 0
 
             for batch in tqdm(self.dataloader, desc=f"Epoch {epoch + 1}/{num_epochs}"):
                 batch = {k: v.to(device) for k, v in batch.items()}
@@ -151,12 +151,13 @@ class KnowledgeDistillation:
                 ) * (temperature ** 2)
 
                 total_loss += loss.item()
+                num_batches += 1
 
                 loss.backward()
                 optimizer.step()
                 optimizer.zero_grad()
 
-            avg_loss = total_loss / len(self.dataloader)
+            avg_loss = total_loss / num_batches if num_batches > 0 else 0
             print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {avg_loss:.4f}")
 
             # Evaluation
@@ -202,6 +203,6 @@ if __name__ == "__main__":
         load_weights=False  # Load only the architecture, not the weights
     )
     kd.load_dataset(streaming=True)
-    kd.prepare_data(batch_size=2, max_length=128, num_samples=100)
+    kd.prepare_data(batch_size=2, max_length=128, num_samples=20)
     kd.train(num_epochs=3, learning_rate=5e-5, temperature=0.5)
     kd.save_model()
