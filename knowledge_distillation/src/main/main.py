@@ -18,7 +18,7 @@ class KnowledgeDistillation:
         self.dataset = None
         self.dataloader = None
 
-    def load_teacher_model(self, use_8bit=True):
+    def load_teacher_model(self, use_8bit=False):
         print("Loading teacher model...")
         if use_8bit:
             self.teacher_model = AutoModelForCausalLM.from_pretrained(
@@ -119,7 +119,7 @@ class KnowledgeDistillation:
         self.dataloader = DataLoader(self.dataset, batch_size=batch_size, shuffle=False)
         print(f"Data preparation completed. Using {num_samples if num_samples is not None else 'all'} samples.")
 
-    def train(self, num_epochs=3, learning_rate=5e-5, temperature=0.5):
+    def train(self, num_epochs=3, learning_rate=1e-5, temperature=0.5, max_grad_norm=1.0):
         print("Starting training...")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -143,18 +143,41 @@ class KnowledgeDistillation:
 
                 student_outputs = self.student_model(**batch)
 
-                loss = F.kl_div(
-                    F.log_softmax(student_outputs.logits / temperature, dim=-1),
-                    F.softmax(teacher_outputs.logits / temperature, dim=-1),
-                    reduction="batchmean"
-                ) * (temperature ** 2)
+                # Check for NaN in logits
+                if torch.isnan(student_outputs.logits).any() or torch.isnan(teacher_outputs.logits).any():
+                    print("NaN detected in model outputs")
+                    continue
+
+                student_logits = F.log_softmax(student_outputs.logits / temperature, dim=-1)
+                teacher_logits = F.softmax(teacher_outputs.logits / temperature, dim=-1)
+
+                # Check for NaN after softmax
+                if torch.isnan(student_logits).any() or torch.isnan(teacher_logits).any():
+                    print("NaN detected after softmax/log_softmax")
+                    continue
+
+                loss = F.kl_div(student_logits, teacher_logits, reduction="batchmean") * (temperature ** 2)
+
+                if torch.isnan(loss).any():
+                    print(f"NaN loss detected. Student logits: {student_logits}, Teacher logits: {teacher_logits}")
+                    continue
 
                 total_loss += loss.item()
                 num_batches += 1
 
                 loss.backward()
+
+                # Gradient clipping
+                torch.nn.utils.clip_grad_norm_(self.student_model.parameters(), max_grad_norm)
+
                 optimizer.step()
                 optimizer.zero_grad()
+
+                # Print some sample logits and loss for debugging
+                if num_batches % 10 == 0:
+                    print(f"Sample student logits: {student_logits[0, :5]}")
+                    print(f"Sample teacher logits: {teacher_logits[0, :5]}")
+                    print(f"Current loss: {loss.item()}")
 
             avg_loss = total_loss / num_batches if num_batches > 0 else 0
             print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {avg_loss:.4f}")
@@ -214,5 +237,5 @@ if __name__ == "__main__":
     )
     kd.load_dataset(streaming=True)
     kd.prepare_data(batch_size=2, max_length=128, num_samples=20)
-    kd.train(num_epochs=3, learning_rate=5e-5, temperature=0.5)
+    kd.train(num_epochs=3, learning_rate=1e-5, temperature=0.5, max_grad_norm=1.0)
     kd.save_model()
