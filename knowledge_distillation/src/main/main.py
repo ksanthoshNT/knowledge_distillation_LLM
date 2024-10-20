@@ -18,19 +18,13 @@ class KnowledgeDistillation:
         self.dataset = None
         self.dataloader = None
 
-    def load_teacher_model(self, use_8bit=False, use_4bit=False):
+    def load_teacher_model(self, use_8bit=True):
         print("Loading teacher model...")
         if use_8bit:
             self.teacher_model = AutoModelForCausalLM.from_pretrained(
                 self.teacher_model_name,
                 device_map="auto",
                 load_in_8bit=True
-            )
-        elif use_4bit:
-            self.teacher_model = AutoModelForCausalLM.from_pretrained(
-                self.teacher_model_name,
-                device_map="auto",
-                load_in_4bit=True
             )
         else:
             self.teacher_model = AutoModelForCausalLM.from_pretrained(
@@ -49,27 +43,14 @@ class KnowledgeDistillation:
             param.requires_grad = False
         print("Teacher model loaded successfully.")
 
-    def load_student_model(self, student_model_name=None, target_size=None, use_8bit=False, use_4bit=False):
+    def load_student_model(self, student_model_name=None, target_size=None):
         print("Loading student model...")
         if student_model_name:
-            if use_8bit:
-                self.student_model = AutoModelForCausalLM.from_pretrained(
-                    student_model_name,
-                    device_map="auto",
-                    load_in_8bit=True
-                )
-            elif use_4bit:
-                self.student_model = AutoModelForCausalLM.from_pretrained(
-                    student_model_name,
-                    device_map="auto",
-                    load_in_4bit=True
-                )
-            else:
-                self.student_model = AutoModelForCausalLM.from_pretrained(
-                    student_model_name,
-                    device_map="auto",
-                    torch_dtype=torch.float16
-                )
+            self.student_model = AutoModelForCausalLM.from_pretrained(
+                student_model_name,
+                device_map="auto",
+                torch_dtype=torch.float16
+            )
         elif target_size:
             # Create a pruned version of the teacher model
             self.student_model = self._prune_model(self.teacher_model, target_size)
@@ -78,6 +59,10 @@ class KnowledgeDistillation:
 
         # Ensure student model has the same pad token as the teacher
         self.student_model.config.pad_token_id = self.teacher_model.config.pad_token_id
+
+        # Enable gradient computation for student model
+        for param in self.student_model.parameters():
+            param.requires_grad = True
 
         print("Student model loaded successfully.")
 
@@ -192,8 +177,8 @@ class KnowledgeDistillation:
 # Example usage
 if __name__ == "__main__":
     kd = KnowledgeDistillation("meta-llama/Llama-3.2-3B-Instruct", "wikitext", "wikitext-2-raw-v1")
-    kd.load_teacher_model()  # Load in 8-bit quantization
-    kd.load_student_model(target_size=1_000_000_000)  # 1B parameters, 8-bit quantization
+    kd.load_teacher_model()  # Load teacher in 8-bit quantization
+    kd.load_student_model(student_model_name='meta-llama/Llama-3.2-1B-Instruct')  # 1B parameters, float16 precision
     kd.load_dataset(streaming=True)
     kd.prepare_data(batch_size=2, max_length=128)  # Reduced batch size and sequence length
     kd.train(num_epochs=3, learning_rate=5e-5, temperature=0.5)
