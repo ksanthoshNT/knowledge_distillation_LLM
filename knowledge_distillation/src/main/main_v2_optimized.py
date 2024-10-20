@@ -186,11 +186,11 @@ class KnowledgeDistillation:
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Run Knowledge Distillation")
-    parser.add_argument("--teacher_model_name", default="meta-llama/Llama-2-7b-chat-hf", help="Name of the teacher model")
+    parser.add_argument("--teacher_model_name", default="meta-llama/Llama-3.2-3B-Instruct", help="Name of the teacher model")
     parser.add_argument("--teacher_precision", default="float16", help="Precision to use for the teacher model")
     parser.add_argument("--dataset_name", default="wikitext", help="Name of the dataset")
     parser.add_argument("--dataset_config_name", default="wikitext-2-raw-v1", help="Configuration name of the dataset")
-    parser.add_argument("--student_model_name", default="meta-llama/Llama-2-7b-chat-hf", help="Name of the student model")
+    parser.add_argument("--student_model_name", default="meta-llama/Llama-3.2-1B-Instruct", help="Name of the student model")
     parser.add_argument("--student_precision", default="float16", help="Precision to use for the student model")
     parser.add_argument("--load_student_weights", type=bool, default=True, help="Whether to load the weights for the student model")
     parser.add_argument("--streaming", type=bool, default=True, help="Whether to use streaming for dataset loading")
