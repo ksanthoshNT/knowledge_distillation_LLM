@@ -90,7 +90,7 @@ class KnowledgeDistillation:
         self.dataset = load_dataset(self.dataset_name, self.dataset_config, split="train", streaming=streaming)
         print("Dataset loaded successfully.")
 
-    def prepare_data(self, batch_size=2, max_length=128):
+    def prepare_data(self, batch_size=2, max_length=128, num_samples=None):
         print("Preparing data...")
 
         def tokenize_function(examples):
@@ -109,11 +109,15 @@ class KnowledgeDistillation:
 
         if isinstance(self.dataset, IterableDataset):
             self.dataset = self.dataset.map(preprocess_function, batched=True, remove_columns=self.dataset.column_names)
+            if num_samples is not None:
+                self.dataset = self.dataset.take(num_samples)
         else:
+            if num_samples is not None:
+                self.dataset = self.dataset.select(range(min(num_samples, len(self.dataset))))
             self.dataset = self.dataset.map(preprocess_function, batched=True, remove_columns=self.dataset.column_names)
 
         self.dataloader = DataLoader(self.dataset, batch_size=batch_size, shuffle=False)
-        print("Data preparation completed.")
+        print(f"Data preparation completed. Using {num_samples if num_samples is not None else 'all'} samples.")
 
     def train(self, num_epochs=3, learning_rate=5e-5, temperature=0.5):
         print("Starting training...")
@@ -198,6 +202,6 @@ if __name__ == "__main__":
         load_weights=False  # Load only the architecture, not the weights
     )
     kd.load_dataset(streaming=True)
-    kd.prepare_data(batch_size=2, max_length=128)  # Reduced batch size and sequence length
+    kd.prepare_data(batch_size=2, max_length=128, num_samples=100)
     kd.train(num_epochs=3, learning_rate=5e-5, temperature=0.5)
     kd.save_model()
