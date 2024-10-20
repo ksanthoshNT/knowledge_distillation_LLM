@@ -33,7 +33,7 @@ class KnowledgeDistillation:
             self.teacher_model = AutoModelForCausalLM.from_pretrained(
                 self.teacher_model_name,
                 device_map="auto",
-                torch_dtype=torch.float16
+                torch_dtype=torch.float32
             )
         self.tokenizer = AutoTokenizer.from_pretrained(self.teacher_model_name)
 
@@ -270,11 +270,11 @@ def parse_arguments():
     parser.add_argument("--dataset_config_name", default="wikitext-2-raw-v1", help="Configuration name of the dataset")
     parser.add_argument("--student_model_name", default="meta-llama/Llama-3.2-1B-Instruct",
                         help="Name of the student model")
-    parser.add_argument("--student_precision", default="float16", help="Precision to use for the student model")
-    parser.add_argument("--load_student_weights", type=bool, default=False,
+    parser.add_argument("--student_precision", default="float32", help="Precision to use for the student model")
+    parser.add_argument("--load_student_weights", type=bool, default=True,
                         help="Whether to load the weights for the student model")
     parser.add_argument("--streaming", type=bool, help="Whether to use streaming for dataset loading",default=True)
-    parser.add_argument("--batch_size", type=int, default=2, help="Batch size for data preparation")
+    parser.add_argument("--batch_size", type=int, default=4, help="Batch size for data preparation")
     parser.add_argument("--max_length", type=int, default=128, help="Maximum sequence length for data preparation")
     parser.add_argument("--num_samples", type=int, default=50, help="Number of samples to use in data preparation")
     parser.add_argument("--num_epochs", type=int, default=3, help="Number of training epochs")
