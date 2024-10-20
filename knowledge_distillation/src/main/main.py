@@ -39,6 +39,12 @@ class KnowledgeDistillation:
                 torch_dtype=torch.float16
             )
         self.tokenizer = AutoTokenizer.from_pretrained(self.teacher_model_name)
+
+        # Set padding token if it's not set
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.teacher_model.config.pad_token_id = self.tokenizer.eos_token_id
+
         for param in self.teacher_model.parameters():
             param.requires_grad = False
         print("Teacher model loaded successfully.")
@@ -69,6 +75,10 @@ class KnowledgeDistillation:
             self.student_model = self._prune_model(self.teacher_model, target_size)
         else:
             raise ValueError("Either student_model_name or target_size must be provided")
+
+        # Ensure student model has the same pad token as the teacher
+        self.student_model.config.pad_token_id = self.teacher_model.config.pad_token_id
+
         print("Student model loaded successfully.")
 
     def _prune_model(self, model, target_size):
@@ -87,8 +97,13 @@ class KnowledgeDistillation:
         print("Preparing data...")
 
         def tokenize_function(examples):
-            return self.tokenizer(examples["text"], truncation=True, max_length=max_length, return_tensors="pt",
-                                  padding="max_length")
+            return self.tokenizer(
+                examples["text"],
+                truncation=True,
+                max_length=max_length,
+                padding="max_length",
+                return_tensors="pt"
+            )
 
         def preprocess_function(examples):
             processed = tokenize_function(examples)
