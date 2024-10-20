@@ -18,20 +18,58 @@ class KnowledgeDistillation:
         self.dataset = None
         self.dataloader = None
 
-    def load_teacher_model(self):
-        self.teacher_model = AutoModelForCausalLM.from_pretrained(self.teacher_model_name)
+    def load_teacher_model(self, use_8bit=False, use_4bit=False):
+        print("Loading teacher model...")
+        if use_8bit:
+            self.teacher_model = AutoModelForCausalLM.from_pretrained(
+                self.teacher_model_name,
+                device_map="auto",
+                load_in_8bit=True
+            )
+        elif use_4bit:
+            self.teacher_model = AutoModelForCausalLM.from_pretrained(
+                self.teacher_model_name,
+                device_map="auto",
+                load_in_4bit=True
+            )
+        else:
+            self.teacher_model = AutoModelForCausalLM.from_pretrained(
+                self.teacher_model_name,
+                device_map="auto",
+                torch_dtype=torch.float16
+            )
         self.tokenizer = AutoTokenizer.from_pretrained(self.teacher_model_name)
         for param in self.teacher_model.parameters():
             param.requires_grad = False
+        print("Teacher model loaded successfully.")
 
-    def load_student_model(self, student_model_name=None, target_size=None):
+    def load_student_model(self, student_model_name=None, target_size=None, use_8bit=False, use_4bit=False):
+        print("Loading student model...")
         if student_model_name:
-            self.student_model = AutoModelForCausalLM.from_pretrained(student_model_name)
+            if use_8bit:
+                self.student_model = AutoModelForCausalLM.from_pretrained(
+                    student_model_name,
+                    device_map="auto",
+                    load_in_8bit=True
+                )
+            elif use_4bit:
+                self.student_model = AutoModelForCausalLM.from_pretrained(
+                    student_model_name,
+                    device_map="auto",
+                    load_in_4bit=True
+                )
+            else:
+                self.student_model = AutoModelForCausalLM.from_pretrained(
+                    student_model_name,
+                    device_map="auto",
+                    torch_dtype=torch.float16
+                )
         elif target_size:
             # Create a pruned version of the teacher model
             self.student_model = self._prune_model(self.teacher_model, target_size)
         else:
             raise ValueError("Either student_model_name or target_size must be provided")
+        print("Student model loaded successfully.")
 
     def _prune_model(self, model, target_size):
         # This is a placeholder for model pruning logic
@@ -41,23 +79,31 @@ class KnowledgeDistillation:
         return model  # Return the pruned model
 
     def load_dataset(self):
+        print("Loading dataset...")
         self.dataset = load_dataset(self.dataset_name, self.dataset_config, split="train")
+        print("Dataset loaded successfully.")
 
-    def prepare_data(self, batch_size=8):
+    def prepare_data(self, batch_size=4):
+        print("Preparing data...")
+
         def tokenize_function(examples):
             return self.tokenizer(examples["text"], truncation=True, max_length=512)
 
         tokenized_dataset = self.dataset.map(tokenize_function, batched=True)
         data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
         self.dataloader = DataLoader(tokenized_dataset, batch_size=batch_size, collate_fn=data_collator)
+        print("Data preparation completed.")
 
     def train(self, num_epochs=3, learning_rate=5e-5, temperature=0.5):
+        print("Starting training...")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.teacher_model.to(device)
         self.student_model.to(device)
 
         optimizer = torch.optim.AdamW(self.student_model.parameters(), lr=learning_rate)
         perplexity = load("perplexity")
+
+        self.student_model.gradient_checkpointing_enable()  # Enable gradient checkpointing
 
         for epoch in range(num_epochs):
             self.student_model.train()
@@ -93,6 +139,8 @@ class KnowledgeDistillation:
             print(f"Evaluation Loss: {eval_loss:.4f}")
             print(f"Perplexity: {perplexity_score['perplexity']:.4f}")
 
+        print("Training completed.")
+
     def _evaluate(self):
         self.student_model.eval()
         eval_loss = 0
@@ -111,6 +159,7 @@ class KnowledgeDistillation:
         return eval_loss / eval_steps
 
     def save_model(self, output_dir="distilled_model"):
+        print(f"Saving distilled model to {output_dir}...")
         self.student_model.save_pretrained(output_dir)
         self.tokenizer.save_pretrained(output_dir)
         print(f"Distilled model saved to {output_dir}")
@@ -119,9 +168,9 @@ class KnowledgeDistillation:
 # Example usage
 if __name__ == "__main__":
     kd = KnowledgeDistillation("meta-llama/Llama-3.2-3B-Instruct", "wikitext", "wikitext-2-raw-v1")
-    kd.load_teacher_model()
-    kd.load_student_model(student_model_name="meta-llama/Llama-3.2-1B-Instruct")  # 1B parameters
+    kd.load_teacher_model()  # Load in 8-bit quantization
+    kd.load_student_model(target_size=1_000_000_000)  # 1B parameters, 8-bit quantization
     kd.load_dataset()
-    kd.prepare_data()
-    kd.train()
+    kd.prepare_data(batch_size=2)  # Reduced batch size
+    kd.train(num_epochs=3, learning_rate=5e-5, temperature=0.5)
     kd.save_model()
