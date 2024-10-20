@@ -238,9 +238,9 @@ def parse_arguments():
     parser.add_argument("--student_model_name", default="meta-llama/Llama-3.2-1B-Instruct",
                         help="Name of the student model")
     parser.add_argument("--student_precision", default="float16", help="Precision to use for the student model")
-    parser.add_argument("--load_student_weights", action="store_true",
+    parser.add_argument("--load_student_weights", type=bool, default=False,
                         help="Whether to load the weights for the student model")
-    parser.add_argument("--streaming", action="store_true", help="Whether to use streaming for dataset loading",default=True)
+    parser.add_argument("--streaming", type=bool, help="Whether to use streaming for dataset loading",default=True)
     parser.add_argument("--batch_size", type=int, default=2, help="Batch size for data preparation")
     parser.add_argument("--max_length", type=int, default=128, help="Maximum sequence length for data preparation")
     parser.add_argument("--num_samples", type=int, default=20, help="Number of samples to use in data preparation")
