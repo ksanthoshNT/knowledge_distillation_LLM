@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, DataCollatorWithPadding
-from datasets import load_dataset
+from datasets import load_dataset, IterableDataset
 from tqdm import tqdm
 from torch.nn import functional as F
 from evaluate import load
@@ -78,20 +78,29 @@ class KnowledgeDistillation:
         print(f"Pruning model to {target_size} parameters")
         return model  # Return the pruned model
 
-    def load_dataset(self):
+    def load_dataset(self, streaming=True):
         print("Loading dataset...")
-        self.dataset = load_dataset(self.dataset_name, self.dataset_config, split="train")
+        self.dataset = load_dataset(self.dataset_name, self.dataset_config, split="train", streaming=streaming)
         print("Dataset loaded successfully.")
 
-    def prepare_data(self, batch_size=4):
+    def prepare_data(self, batch_size=2, max_length=128):
         print("Preparing data...")
 
         def tokenize_function(examples):
-            return self.tokenizer(examples["text"], truncation=True, max_length=512)
+            return self.tokenizer(examples["text"], truncation=True, max_length=max_length, return_tensors="pt",
+                                  padding="max_length")
 
-        tokenized_dataset = self.dataset.map(tokenize_function, batched=True)
-        data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
-        self.dataloader = DataLoader(tokenized_dataset, batch_size=batch_size, collate_fn=data_collator)
+        def preprocess_function(examples):
+            processed = tokenize_function(examples)
+            processed["labels"] = processed["input_ids"].clone()
+            return processed
+
+        if isinstance(self.dataset, IterableDataset):
+            self.dataset = self.dataset.map(preprocess_function, batched=True, remove_columns=self.dataset.column_names)
+        else:
+            self.dataset = self.dataset.map(preprocess_function, batched=True, remove_columns=self.dataset.column_names)
+
+        self.dataloader = DataLoader(self.dataset, batch_size=batch_size, shuffle=False)
         print("Data preparation completed.")
 
     def train(self, num_epochs=3, learning_rate=5e-5, temperature=0.5):
@@ -170,7 +179,7 @@ if __name__ == "__main__":
     kd = KnowledgeDistillation("meta-llama/Llama-3.2-3B-Instruct", "wikitext", "wikitext-2-raw-v1")
     kd.load_teacher_model()  # Load in 8-bit quantization
     kd.load_student_model(target_size=1_000_000_000)  # 1B parameters, 8-bit quantization
-    kd.load_dataset()
-    kd.prepare_data(batch_size=2)  # Reduced batch size
+    kd.load_dataset(streaming=True)
+    kd.prepare_data(batch_size=2, max_length=128)  # Reduced batch size and sequence length
     kd.train(num_epochs=3, learning_rate=5e-5, temperature=0.5)
     kd.save_model()
