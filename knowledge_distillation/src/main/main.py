@@ -147,13 +147,31 @@ class KnowledgeDistillation:
 
                 student_outputs = self.student_model(**batch)
 
-                # Check for NaN in logits
-                if torch.isnan(student_outputs.logits).any() or torch.isnan(teacher_outputs.logits).any():
-                    print("NaN detected in model outputs")
+                # Debug: Print shapes and sample values
+                print(f"Teacher logits shape: {teacher_outputs.logits.shape}")
+                print(f"Student logits shape: {student_outputs.logits.shape}")
+                print(f"Sample teacher logits: {teacher_outputs.logits[0, :5]}")
+                print(f"Sample student logits: {student_outputs.logits[0, :5]}")
+
+                # Check for NaN or Inf in logits
+                if torch.isnan(student_outputs.logits).any() or torch.isinf(student_outputs.logits).any():
+                    print("NaN or Inf detected in student logits")
+                    print(
+                        f"Student logits stats: min={student_outputs.logits.min()}, max={student_outputs.logits.max()}, mean={student_outputs.logits.mean()}")
+                    continue
+
+                if torch.isnan(teacher_outputs.logits).any() or torch.isinf(teacher_outputs.logits).any():
+                    print("NaN or Inf detected in teacher logits")
+                    print(
+                        f"Teacher logits stats: min={teacher_outputs.logits.min()}, max={teacher_outputs.logits.max()}, mean={teacher_outputs.logits.mean()}")
                     continue
 
                 student_logits = F.log_softmax(student_outputs.logits / temperature, dim=-1)
                 teacher_logits = F.softmax(teacher_outputs.logits / temperature, dim=-1)
+
+                # Debug: Print softmax outputs
+                print(f"Sample student softmax: {student_logits[0, :5]}")
+                print(f"Sample teacher softmax: {teacher_logits[0, :5]}")
 
                 # Check for NaN after softmax
                 if torch.isnan(student_logits).any() or torch.isnan(teacher_logits).any():
@@ -163,25 +181,40 @@ class KnowledgeDistillation:
                 loss = F.kl_div(student_logits, teacher_logits, reduction="batchmean") * (temperature ** 2)
 
                 if torch.isnan(loss).any():
-                    print(f"NaN loss detected. Student logits: {student_logits}, Teacher logits: {teacher_logits}")
+                    print(f"NaN loss detected. Loss value: {loss.item()}")
                     continue
 
                 total_loss += loss.item()
                 num_batches += 1
 
+                # Debug: Print loss and gradients
+                print(f"Loss: {loss.item()}")
+
                 loss.backward()
+
+                # Debug: Print gradient norms
+                total_norm = 0
+                for p in self.student_model.parameters():
+                    if p.grad is not None:
+                        param_norm = p.grad.data.norm(2)
+                        total_norm += param_norm.item() ** 2
+                total_norm = total_norm ** 0.5
+                print(f"Total gradient norm before clipping: {total_norm}")
 
                 # Gradient clipping
                 torch.nn.utils.clip_grad_norm_(self.student_model.parameters(), max_grad_norm)
 
+                # Debug: Print gradient norms after clipping
+                total_norm = 0
+                for p in self.student_model.parameters():
+                    if p.grad is not None:
+                        param_norm = p.grad.data.norm(2)
+                        total_norm += param_norm.item() ** 2
+                total_norm = total_norm ** 0.5
+                print(f"Total gradient norm after clipping: {total_norm}")
+
                 optimizer.step()
                 optimizer.zero_grad()
-
-                # Print some sample logits and loss for debugging
-                if num_batches % 10 == 0:
-                    print(f"Sample student logits: {student_logits[0, :5]}")
-                    print(f"Sample teacher logits: {teacher_logits[0, :5]}")
-                    print(f"Current loss: {loss.item()}")
 
             avg_loss = total_loss / num_batches if num_batches > 0 else 0
             print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {avg_loss:.4f}")
@@ -193,7 +226,6 @@ class KnowledgeDistillation:
             print(f"Perplexity: {perplexity:.4f}")
 
         print("Training completed.")
-
     def _evaluate(self):
         self.student_model.eval()
         total_loss = 0
@@ -244,7 +276,7 @@ def parse_arguments():
     parser.add_argument("--streaming", type=bool, help="Whether to use streaming for dataset loading",default=True)
     parser.add_argument("--batch_size", type=int, default=2, help="Batch size for data preparation")
     parser.add_argument("--max_length", type=int, default=128, help="Maximum sequence length for data preparation")
-    parser.add_argument("--num_samples", type=int, default=20, help="Number of samples to use in data preparation")
+    parser.add_argument("--num_samples", type=int, default=50, help="Number of samples to use in data preparation")
     parser.add_argument("--num_epochs", type=int, default=3, help="Number of training epochs")
     parser.add_argument("--learning_rate", type=float, default=1e-5, help="Learning rate for training")
     parser.add_argument("--temperature", type=float, default=0.5, help="Temperature for knowledge distillation")
