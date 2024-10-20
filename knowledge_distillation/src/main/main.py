@@ -120,6 +120,9 @@ class KnowledgeDistillation:
             self.dataset = self.dataset.map(preprocess_function, batched=True, remove_columns=self.dataset.column_names)
 
         self.dataloader = DataLoader(self.dataset, batch_size=batch_size, shuffle=False)
+        for x in self.dataloader:
+            print(x)
+        exit()
         print(f"Data preparation completed. Using {num_samples if num_samples is not None else 'all'} samples.")
 
     def train(self, num_epochs=3, learning_rate=1e-5, temperature=0.5, max_grad_norm=1.0):
