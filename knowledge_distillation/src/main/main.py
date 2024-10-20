@@ -189,7 +189,7 @@ class KnowledgeDistillation:
 # Example usage
 if __name__ == "__main__":
     kd = KnowledgeDistillation("meta-llama/Llama-3.2-3B-Instruct", "wikitext", "wikitext-2-raw-v1")
-    kd.load_teacher_model(use_8bit=True)  # Load teacher in 8-bit quantization
+    kd.load_teacher_model()  # Load teacher in 8-bit quantization
     kd.load_student_model(
         student_model_name="meta-llama/Llama-3.2-1B-Instruct",  # Example student model
         precision="float16",  # Use float16 precision
