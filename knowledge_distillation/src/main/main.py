@@ -118,8 +118,10 @@ class KnowledgeDistillation:
     def train(self, num_epochs=3, learning_rate=5e-5, temperature=0.5):
         print("Starting training...")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.teacher_model.to(device)
-        self.student_model.to(device)
+
+        # Only move the student model if it's not already on the correct device
+        if next(self.student_model.parameters()).device != device:
+            self.student_model.to(device)
 
         optimizer = torch.optim.AdamW(self.student_model.parameters(), lr=learning_rate)
         perplexity = load("perplexity")
