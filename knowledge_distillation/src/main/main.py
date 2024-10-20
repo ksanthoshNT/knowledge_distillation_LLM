@@ -1,3 +1,5 @@
+import argparse
+
 import torch
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, DataCollatorWithPadding
@@ -226,16 +228,46 @@ class KnowledgeDistillation:
         print(f"Distilled model saved to {output_dir}")
 
 
-# Example usage
-if __name__ == "__main__":
-    kd = KnowledgeDistillation("meta-llama/Llama-3.2-3B-Instruct", "wikitext", "wikitext-2-raw-v1")
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Run Knowledge Distillation")
+    parser.add_argument("--teacher_model_name", default="meta-llama/Llama-3.2-3B-Instruct",
+                        help="Name of the teacher model")
+    parser.add_argument("--dataset_name", default="wikitext", help="Name of the dataset")
+    parser.add_argument("--dataset_config_name", default="wikitext-2-raw-v1", help="Configuration name of the dataset")
+    parser.add_argument("--student_model_name", default="meta-llama/Llama-3.2-1B-Instruct",
+                        help="Name of the student model")
+    parser.add_argument("--student_precision", default="float16", help="Precision to use for the student model")
+    parser.add_argument("--load_student_weights", action="store_true",
+                        help="Whether to load the weights for the student model")
+    parser.add_argument("--streaming", action="store_true", help="Whether to use streaming for dataset loading")
+    parser.add_argument("--batch_size", type=int, default=2, help="Batch size for data preparation")
+    parser.add_argument("--max_length", type=int, default=128, help="Maximum sequence length for data preparation")
+    parser.add_argument("--num_samples", type=int, default=20, help="Number of samples to use in data preparation")
+    parser.add_argument("--num_epochs", type=int, default=3, help="Number of training epochs")
+    parser.add_argument("--learning_rate", type=float, default=1e-5, help="Learning rate for training")
+    parser.add_argument("--temperature", type=float, default=0.5, help="Temperature for knowledge distillation")
+    parser.add_argument("--max_grad_norm", type=float, default=1.0, help="Maximum gradient norm for training")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_arguments()
+    print(args.streaming)
+    exit()
+
+    kd = KnowledgeDistillation(args.teacher_model_name, args.dataset_name, args.dataset_config_name)
     kd.load_teacher_model()  # Load teacher in 8-bit quantization
     kd.load_student_model(
-        student_model_name="meta-llama/Llama-3.2-1B-Instruct",  # Example student model
-        precision="float16",  # Use float16 precision
-        load_weights=False  # Load only the architecture, not the weights
+        student_model_name=args.student_model_name,
+        precision=args.student_precision,
+        load_weights=args.load_student_weights
     )
-    kd.load_dataset(streaming=True)
-    kd.prepare_data(batch_size=2, max_length=128, num_samples=20)
-    kd.train(num_epochs=3, learning_rate=1e-5, temperature=0.5, max_grad_norm=1.0)
+    kd.load_dataset(streaming=args.streaming)
+    kd.prepare_data(batch_size=args.batch_size, max_length=args.max_length, num_samples=args.num_samples)
+    kd.train(num_epochs=args.num_epochs, learning_rate=args.learning_rate, temperature=args.temperature,
+             max_grad_norm=args.max_grad_norm)
     kd.save_model()
+
+
+if __name__ == "__main__":
+    main()
