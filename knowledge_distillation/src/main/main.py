@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer, DataCollatorWithPadding
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, DataCollatorWithPadding
 from datasets import load_dataset, IterableDataset
 from tqdm import tqdm
 from torch.nn import functional as F
@@ -43,17 +43,29 @@ class KnowledgeDistillation:
             param.requires_grad = False
         print("Teacher model loaded successfully.")
 
-    def load_student_model(self, student_model_name=None, target_size=None):
+    def load_student_model(self, student_model_name=None, target_size=None, precision="float16", load_weights=True):
         print("Loading student model...")
+
+        if precision == "float16":
+            dtype = torch.float16
+        elif precision == "float32":
+            dtype = torch.float32
+        else:
+            raise ValueError("Precision must be either 'float16' or 'float32'")
+
         if student_model_name:
-            self.student_model = AutoModelForCausalLM.from_pretrained(
-                student_model_name,
-                device_map="auto",
-                torch_dtype=torch.float16
-            )
+            if load_weights:
+                self.student_model = AutoModelForCausalLM.from_pretrained(
+                    student_model_name,
+                    device_map="auto",
+                    torch_dtype=dtype
+                )
+            else:
+                config = AutoConfig.from_pretrained(student_model_name)
+                self.student_model = AutoModelForCausalLM.from_config(config).to(dtype)
         elif target_size:
             # Create a pruned version of the teacher model
-            self.student_model = self._prune_model(self.teacher_model, target_size)
+            self.student_model = self._prune_model(self.teacher_model, target_size, dtype)
         else:
             raise ValueError("Either student_model_name or target_size must be provided")
 
@@ -64,14 +76,14 @@ class KnowledgeDistillation:
         for param in self.student_model.parameters():
             param.requires_grad = True
 
-        print("Student model loaded successfully.")
+        print(f"Student model loaded successfully with {precision} precision.")
 
-    def _prune_model(self, model, target_size):
+    def _prune_model(self, model, target_size, dtype):
         # This is a placeholder for model pruning logic
         # In a real implementation, you would use techniques like weight pruning,
         # layer removal, or model compression to reduce the model size
         print(f"Pruning model to {target_size} parameters")
-        return model  # Return the pruned model
+        return model.to(dtype)  # Return the pruned model in the specified dtype
 
     def load_dataset(self, streaming=True):
         print("Loading dataset...")
@@ -177,8 +189,12 @@ class KnowledgeDistillation:
 # Example usage
 if __name__ == "__main__":
     kd = KnowledgeDistillation("meta-llama/Llama-3.2-3B-Instruct", "wikitext", "wikitext-2-raw-v1")
-    kd.load_teacher_model()  # Load teacher in 8-bit quantization
-    kd.load_student_model(student_model_name='meta-llama/Llama-3.2-1B-Instruct')  # 1B parameters, float16 precision
+    kd.load_teacher_model(use_8bit=True)  # Load teacher in 8-bit quantization
+    kd.load_student_model(
+        student_model_name="meta-llama/Llama-3.2-1B-Instruct",  # Example student model
+        precision="float16",  # Use float16 precision
+        load_weights=False  # Load only the architecture, not the weights
+    )
     kd.load_dataset(streaming=True)
     kd.prepare_data(batch_size=2, max_length=128)  # Reduced batch size and sequence length
     kd.train(num_epochs=3, learning_rate=5e-5, temperature=0.5)
