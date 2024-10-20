@@ -42,8 +42,13 @@ class KnowledgeDistillation:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self.teacher_model.config.pad_token_id = self.tokenizer.eos_token_id
 
+        # Freeze teacher model parameters
         for param in self.teacher_model.parameters():
             param.requires_grad = False
+
+        # Print model sizes
+        teacher_params = sum(p.numel() for p in self.teacher_model.parameters())
+        print(f"Teacher model size: {teacher_params:,} parameters")
         print("Teacher model loaded successfully.")
 
     def load_student_model(self, student_model_name=None, target_size=None, precision="float16", load_weights=True):
@@ -78,6 +83,10 @@ class KnowledgeDistillation:
         # Enable gradient computation for student model
         for param in self.student_model.parameters():
             param.requires_grad = True
+
+        # Print model sizes
+        student_params = sum(p.numel() for p in self.student_model.parameters())
+        print(f"Student model size: {student_params:,} parameters")
 
         print(f"Student model loaded successfully with {precision} precision.")
 
