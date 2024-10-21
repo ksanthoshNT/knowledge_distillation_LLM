@@ -21,7 +21,7 @@ def load_model(model_name, device):
 
 
 def generate_text(model, tokenizer, input_text, max_new_tokens=100):
-    inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_new_tokens=max_new_tokens)
+    inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_length=max_new_tokens)
     input_ids = inputs["input_ids"].to(model.device)
     attention_mask = inputs["attention_mask"].to(model.device)
     output = model.generate(input_ids, attention_mask=attention_mask, max_new_tokens=max_new_tokens, num_return_sequences=1, do_sample=True, pad_token_id=tokenizer.pad_token_id)
