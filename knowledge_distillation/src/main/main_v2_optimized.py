@@ -1,5 +1,6 @@
 import argparse
 import torch
+from torch.nn.utils import prune
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, DataCollatorWithPadding
 from datasets import load_dataset, IterableDataset
@@ -76,8 +77,22 @@ class KnowledgeDistillation:
         print(f"Student model loaded successfully with {precision} precision.")
 
     def _prune_model(self, model, target_size, dtype):
-        print(f"Pruning model to {target_size} parameters")
-        return model.to(dtype)
+        print(f"Pruning model to approximately {target_size} parameters")
+        current_size = sum(p.numel() for p in model.parameters())
+        target_size = int(target_size.rstrip('B')) * 1_000_000_000  # Convert 3B to 3000000000
+        prune_ratio = 1 - (target_size / current_size)
+
+        pruned_model = AutoModelForCausalLM.from_config(model.config).to(dtype)
+        pruned_model.load_state_dict(model.state_dict())
+
+        for name, module in pruned_model.named_modules():
+            if isinstance(module, torch.nn.Linear):
+                prune.l1_unstructured(module, name='weight', amount=prune_ratio)
+                prune.remove(module, 'weight')
+
+        pruned_size = sum(p.numel() for p in pruned_model.parameters())
+        print(f"Pruned model size: {pruned_size:,} parameters")
+        return pruned_model.to(dtype)
 
     def load_dataset(self, streaming=True):
         print("Loading dataset...")
