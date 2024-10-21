@@ -82,10 +82,10 @@ class KnowledgeDistillation:
 
         ds_config = {
             "train_micro_batch_size_per_gpu": self.args.batch_size,
-            "gradient_accumulation_steps": 2,
+            "gradient_accumulation_steps": 4,
             "fp16": {"enabled": True},
             "zero_optimization": {
-                "stage": 2,
+                "stage":3,
                 "offload_optimizer": {
                       "device": "cpu",
                       "pin_memory": True
@@ -198,7 +198,7 @@ def main():
     parser.add_argument("--dataset_name", default="wikitext", type=str)
     parser.add_argument("--dataset_config_name", default="wikitext-2-raw-v1", type=str)
     parser.add_argument("--max_length", default=128, type=int)
-    parser.add_argument("--batch_size", default=4, type=int)
+    parser.add_argument("--batch_size", default=2, type=int)
     parser.add_argument("--learning_rate", default=5e-5, type=float)
     parser.add_argument("--num_epochs", default=3, type=int)
     parser.add_argument("--warmup_steps", default=500, type=int)
