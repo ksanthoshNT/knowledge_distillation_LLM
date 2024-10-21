@@ -20,6 +20,8 @@ class LMDataset:
         self.tokenizer = tokenizer
         logger.info(f"Loading dataset: {args.dataset_name} ({args.dataset_config_name}) - {split}")
         self.data = load_dataset(args.dataset_name, args.dataset_config_name, split=split, streaming=args.streaming)
+        logger.info(f"Dataset features: {next(iter(self.data)).keys()}")
+        logger.info(f"Sample data item: {next(iter(self.data))}")
         if not args.streaming:
             self.data = self.data.shuffle(seed=args.seed)
         self.max_length = args.max_length
@@ -35,10 +37,14 @@ class LMDataset:
     def __getitem__(self, idx):
         try:
             item = next(iter(self.data)) if self.args.streaming else self.data[idx]
-            encoded = self.tokenizer(item['text'], truncation=True, max_length=self.max_length, return_tensors='pt')
+            question = item['question']
+            query = item['query']
+            text = f"Question: {question}\nSQL Query: {query}"
+            encoded = self.tokenizer(text, truncation=True, max_length=self.max_length, return_tensors='pt')
             return {k: v.squeeze(0) for k, v in encoded.items()}
         except Exception as e:
             logger.error(f"Error in __getitem__: {e}")
+            logger.error(f"Item causing error: {item}")
             raise
 
     def collate_fn(self, batch):
