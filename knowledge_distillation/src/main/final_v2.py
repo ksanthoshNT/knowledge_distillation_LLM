@@ -22,15 +22,12 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
 class LMDataset:
     def __init__(self, args, tokenizer, split):
         self.args = args
         self.tokenizer = tokenizer
         logger.info(f"Loading dataset: {args.dataset_name} ({args.dataset_config_name}) - {split}")
-        self.data = load_from_disk(args.dataset_name)[split] if os.path.exists(args.dataset_name) else load_dataset(args.dataset_name,split=split)
-        # logger.info(f"Dataset features: {next(iter(self.data)).keys()}")
-        # logger.info(f"Sample data item: {next(iter(self.data))}")
+        self.data = load_from_disk(args.dataset_name)[split] if os.path.exists(args.dataset_name) else load_dataset(args.dataset_name, split=split)
         if not args.streaming:
             self.data = self.data.shuffle(seed=args.seed)
         self.max_length = args.max_length
@@ -113,14 +110,14 @@ class LMDataset:
             # Construct the text in the specified format
             text = f"""<|begin_of_text|><|start_header_id|>user<|end_header_id|>
 
-    Generate a SQL query to answer this question: `{user_question}`
+Generate a SQL query to answer this question: `{user_question}`
 
-    DDL statements:
-    {create_table_statements}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+DDL statements:
+{create_table_statements}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
-    The following SQL query best answers the question `{user_question}`:
-    ```sql
-    {sql_query}"""
+The following SQL query best answers the question `{user_question}`:
+```sql
+{sql_query}"""
             encoded = self.tokenizer(text, truncation=True, max_length=self.max_length, return_tensors='pt')
             return {k: v.squeeze(0) for k, v in encoded.items()}
         except Exception as e:
@@ -134,7 +131,6 @@ class LMDataset:
         except Exception as e:
             logger.error(f"Error in collate_fn: {e}")
             raise
-
 
 class KnowledgeDistillation:
     def __init__(self, args, local_rank):
@@ -152,16 +148,14 @@ class KnowledgeDistillation:
         logger.info("Loading teacher model...")
         self.teacher_model = AutoModelForCausalLM.from_pretrained(args.teacher_model_name,
                                                                   device_map={"": self.device},
-                                                                  torch_dtype=torch.bfloat16,
-                                                                  token="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")
+                                                                  torch_dtype=torch.bfloat16)
         self.teacher_model.config.pad_token_id = self.tokenizer.pad_token_id
         self.teacher_model.eval()
 
         logger.info("Loading student model...")
         self.student_model = AutoModelForCausalLM.from_pretrained(args.student_model_name,
                                                                   device_map={"": self.device},
-                                                                  torch_dtype=torch.bfloat16,
-                                                                  token="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")
+                                                                  torch_dtype=torch.bfloat16)
         self.student_model.config.pad_token_id = self.tokenizer.pad_token_id
         self.student_model.gradient_checkpointing_enable()
         self.student_model = DDP(self.student_model, device_ids=[local_rank])
@@ -189,8 +183,7 @@ class KnowledgeDistillation:
             train_sampler.set_epoch(epoch)
             self.student_model.train()
 
-            for batch_idx, batch in enumerate(
-                    tqdm(train_loader, desc=f"Epoch {epoch + 1}/{self.args.num_epochs}", disable=self.local_rank != 0)):
+            for batch_idx, batch in enumerate(tqdm(train_loader, desc=f"Epoch {epoch + 1}/{self.args.num_epochs}", disable=self.local_rank != 0)):
                 try:
                     batch = {k: v.to(self.device) for k, v in batch.items()}
 
@@ -199,8 +192,7 @@ class KnowledgeDistillation:
 
                     student_outputs = self.student_model(**batch)
 
-                    loss = self.distillation_loss(student_outputs.logits, teacher_outputs.logits, batch['input_ids'],
-                                                  self.args.temperature)
+                    loss = self.distillation_loss(student_outputs.logits, teacher_outputs.logits, batch['input_ids'], self.args.temperature)
 
                     loss.backward()
                     optimizer.step()
@@ -261,11 +253,6 @@ class KnowledgeDistillation:
         if torch.cuda.is_available():
             logger.info(f"GPU Memory Usage: {torch.cuda.memory_allocated() / 1024 / 1024:.2f} MB")
 
-    def save_model(self, output_dir="distilled_model"):
-        print(f"Saving distilled model to {output_dir}...")
-        self.student_model.save_pretrained(output_dir)
-        self.tokenizer.save_pretrained(output_dir)
-        print(f"Distilled model saved to {output_dir}")
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
@@ -273,7 +260,6 @@ def setup(rank, world_size):
 
 def cleanup():
     dist.destroy_process_group()
-
 
 def main(rank, world_size, args):
     setup(rank, world_size)
@@ -283,20 +269,17 @@ def main(rank, world_size, args):
     try:
         kd = KnowledgeDistillation(args, rank)
         kd.train()
-        if rank == 0:
-            kd.save_model()
     except Exception as e:
         logger.error(f"Fatal error: {e}")
     finally:
         cleanup()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--teacher_model_name", default="meta-llama/Llama-3.2-3B-Instruct", type=str)
-    parser.add_argument("--student_model_name", default="meta-llama/Llama-3.2-1B-Instruct", type=str)
-    parser.add_argument("--dataset_name",
-                        default="/home/data_science/project_files/santhosh/lamini__spider_text_to_sql", type=str)
-    parser.add_argument("--dataset_num_samples", type=int, default=None,
-                        help="Number of samples to process. Use None for full dataset.")
+    parser.add_argument("--teacher_model_name", default="defog/llama-3-sqlcoder-8b", type=str)
+    parser.add_argument("--student_model_name", default="meta-llama/Llama-3.2-3B-Instruct", type=str)
+    parser.add_argument("--dataset_name", default="lamini/spider_text_to_sql", type=str)
+    parser.add_argument("--dataset_num_samples", type=int, default=None, help="Number of samples to process. Use None for full dataset.")
     parser.add_argument("--dataset_config_name", default=None, type=str)
     parser.add_argument("--max_length", default=128, type=int)
     parser.add_argument("--batch_size", default=2, type=int)
@@ -305,7 +288,7 @@ if __name__ == "__main__":
     parser.add_argument("--warmup_steps", default=500, type=int)
     parser.add_argument("--temperature", default=1.0, type=float)
     parser.add_argument("--output_dir", default="distilled_model", type=str)
-    parser.add_argument("--streaming", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--streaming", action="store_true")
     parser.add_argument("--num_samples", default=100, type=int)
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument("--world_size", type=int, default=torch.cuda.device_count(), help="Number of GPUs to use")
@@ -313,11 +296,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logger.info(f"Starting script with args: {args}")
 
-
-    logger.info(f"Starting script with args: {args}")
-    torch.manual_seed(args.seed)
-
     world_size = args.world_size
     torch.multiprocessing.spawn(main, args=(world_size, args), nprocs=world_size, join=True)
-
-
