@@ -24,7 +24,7 @@ class LMDataset:
         self.args = args
         self.tokenizer = tokenizer
         logger.info(f"Loading dataset: {args.dataset_name} ({args.dataset_config_name}) - {split}")
-        self.data = load_from_disk(args.dataset_name)[split]
+        self.data = load_from_disk(args.dataset_name)[split] if os.path.exists(args.dataset_name) else load_dataset(args.dataset_name,split=split)
         # logger.info(f"Dataset features: {next(iter(self.data)).keys()}")
         # logger.info(f"Sample data item: {next(iter(self.data))}")
         if not args.streaming:
