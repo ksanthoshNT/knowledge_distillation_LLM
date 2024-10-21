@@ -80,18 +80,60 @@ class KnowledgeDistillation:
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=self.args.warmup_steps,
                                                     num_training_steps=len(train_loader) * self.args.num_epochs)
 
+        # ds_config = {
+        #     "train_micro_batch_size_per_gpu": self.args.batch_size,
+        #     "gradient_accumulation_steps": 4,
+        #     "fp16": {"enabled": True},
+        #     "zero_optimization": {
+        #         "stage":3,
+        #         "offload_optimizer": {
+        #               "device": "cpu",
+        #               "pin_memory": True
+        #           }
+        #     },
+        #
+        #     "optimizer": {
+        #         "type": "AdamW",
+        #         "params": {
+        #             "lr": self.args.learning_rate,
+        #             "betas": [0.9, 0.999],
+        #             "eps": 1e-8,
+        #             "weight_decay": 0.01
+        #         }
+        #     }
+        # }
         ds_config = {
-            "train_micro_batch_size_per_gpu": self.args.batch_size,
-            "gradient_accumulation_steps": 4,
-            "fp16": {"enabled": True},
-            "zero_optimization": {
-                "stage":3,
-                "offload_optimizer": {
-                      "device": "cpu",
-                      "pin_memory": True
-                  }
+            "train_micro_batch_size_per_gpu": 1,  # Reduce to 1
+            "gradient_accumulation_steps": 8,  # Increase to compensate for smaller batch size
+            "fp16": {
+                "enabled": True,
+                "auto_cast": True,
+                "loss_scale": 0,
+                "initial_scale_power": 32,
+                "loss_scale_window": 1000,
+                "hysteresis": 2,
+                "min_loss_scale": 1
             },
-
+            "zero_optimization": {
+                "stage": 3,
+                "offload_optimizer": {
+                    "device": "cpu",
+                    "pin_memory": True
+                },
+                "offload_param": {
+                    "device": "cpu",
+                    "pin_memory": True
+                },
+                "overlap_comm": True,
+                "contiguous_gradients": True,
+                "sub_group_size": 1e9,
+                "reduce_bucket_size": 1e6,
+                "stage3_prefetch_bucket_size": 1e6,
+                "stage3_param_persistence_threshold": 1e4,
+                "stage3_max_live_parameters": 1e9,
+                "stage3_max_reuse_distance": 1e9,
+                "stage3_gather_fp16_weights_on_model_save": True
+            },
             "optimizer": {
                 "type": "AdamW",
                 "params": {
