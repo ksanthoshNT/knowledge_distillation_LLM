@@ -9,7 +9,7 @@ from datasets import load_dataset
 from tqdm import tqdm
 import os
 import logging
-
+import json
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,17 @@ def train(args, student_model, teacher_model, train_dataset, tokenizer):
 
     if args.deepspeed or args.deepspeed_config:
         import deepspeed
-        ds_config = args.deepspeed_config if args.deepspeed_config else args.deepspeed
+        ds_config = None
+        if args.deepspeed_config:
+            with open(args.deepspeed_config, 'r') as f:
+                ds_config = json.load(f)
+        elif args.deepspeed:
+            with open(args.deepspeed, 'r') as f:
+                ds_config = json.load(f)
+
+        if ds_config is None:
+            raise ValueError("DeepSpeed config file not found or invalid")
+
         student_model, optimizer, _, _ = deepspeed.initialize(
             model=student_model,
             model_parameters=optimizer_grouped_parameters,
