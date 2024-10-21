@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, DistributedSampler
 import deepspeed
-from transformers import AutoModelForCausalLM, AutoTokenizer, get_linear_schedule_with_warmup
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_dataset
 from tqdm import tqdm
 import os
@@ -118,9 +118,7 @@ def train(args, student_model, teacher_model, train_dataset, tokenizer):
     else:
         optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
 
-    lr_scheduler = get_linear_schedule_with_warmup(
-        optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=len(train_dataloader) * args.num_epochs
-    )
+    # Remove the lr_scheduler setup
 
     student_model.train()
     teacher_model.eval()
@@ -149,7 +147,6 @@ def train(args, student_model, teacher_model, train_dataset, tokenizer):
 
             student_model.backward(loss)
             student_model.step()
-            lr_scheduler.step()
 
             if step % 100 == 0:
                 logger.info(
