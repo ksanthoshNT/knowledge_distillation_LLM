@@ -16,17 +16,22 @@ def load_model(model_name, device):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+        model.config.pad_token_id = tokenizer.pad_token_id
     return model, tokenizer
 
 
 def generate_text(model, tokenizer, input_text, max_length=50):
-    input_ids = tokenizer.encode(input_text, return_tensors="pt").to(model.device)
-    output = model.generate(input_ids, max_length=max_length, num_return_sequences=1, do_sample=True)
+    inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
+    input_ids = inputs["input_ids"].to(model.device)
+    attention_mask = inputs["attention_mask"].to(model.device)
+    output = model.generate(input_ids, attention_mask=attention_mask, max_length=max_length, num_return_sequences=1, do_sample=True, pad_token_id=tokenizer.pad_token_id)
     return tokenizer.decode(output[0], skip_special_tokens=True)
 
 
+
 def calculate_perplexity(model, tokenizer, text):
-    inputs = tokenizer(text, return_tensors="pt").to(model.device)
+    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+    inputs = {k: v.to(model.device) for k, v in inputs.items()}
     with torch.no_grad():
         outputs = model(**inputs, labels=inputs["input_ids"])
     return torch.exp(outputs.loss).item()
@@ -77,6 +82,7 @@ def main():
     print("Loading models...")
     teacher_model, tokenizer = load_model(args.teacher_model_name, device)
     student_model, _ = load_model(args.student_model_path, device)
+    student_model.config.pad_token_id = tokenizer.pad_token_id  # pad token
 
     print("Loading dataset...")
     train_dataset = load_dataset(args.dataset_name, args.dataset_config_name, split="train")
