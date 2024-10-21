@@ -56,7 +56,7 @@ class LMDataset:
 
 class KnowledgeDistillation:
     def __init__(self, args):
-        # self.args = args
+        self.args = args
         # logger.info(f"Initializing KnowledgeDistillation with args: {args}")
         # self.tokenizer = AutoTokenizer.from_pretrained(args.teacher_model_name)
         #
