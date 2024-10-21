@@ -53,9 +53,9 @@ class KnowledgeDistillation:
         logger.info(f"Initializing KnowledgeDistillation with args: {args}")
         self.tokenizer = AutoTokenizer.from_pretrained(args.teacher_model_name)
         logger.info("Loading teacher model...")
-        self.teacher_model = AutoModelForCausalLM.from_pretrained(args.teacher_model_name, torch_dtype=torch.float16)
+        self.teacher_model = AutoModelForCausalLM.from_pretrained(args.teacher_model_name, torch_dtype=torch.bfloat16)
         logger.info("Loading student model...")
-        self.student_model = AutoModelForCausalLM.from_pretrained(args.student_model_name, torch_dtype=torch.float16)
+        self.student_model = AutoModelForCausalLM.from_pretrained(args.student_model_name, torch_dtype=torch.bfloat16)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Using device: {self.device}")
 
