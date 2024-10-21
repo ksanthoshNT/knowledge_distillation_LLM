@@ -55,7 +55,10 @@ class KnowledgeDistillation:
         }
         if dtype.get(precision, None) is None:
             raise ValueError(f"Invalid precision: {precision}")
-        if student_model_name:
+
+        if len(student_model_name)==2 and 'B' in student_model_name:
+            self.student_model = self._prune_model(self.teacher_model, target_size, dtype)
+        elif student_model_name:
             if load_weights:
                 self.student_model = AutoModelForCausalLM.from_pretrained(
                     student_model_name,
@@ -65,8 +68,7 @@ class KnowledgeDistillation:
             else:
                 config = AutoConfig.from_pretrained(student_model_name)
                 self.student_model = AutoModelForCausalLM.from_config(config).to(dtype)
-        elif target_size:
-            self.student_model = self._prune_model(self.teacher_model, target_size, dtype)
+
         else:
             raise ValueError("Either student_model_name or target_size must be provided")
         self.student_model.config.pad_token_id = self.teacher_model.config.pad_token_id
