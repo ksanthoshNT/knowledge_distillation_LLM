@@ -74,10 +74,8 @@ class KnowledgeDistillation:
         ds_config = {
             "train_micro_batch_size_per_gpu": self.args.batch_size,
             "gradient_accumulation_steps": 1,
-            "fp16": {"enabled": True},
+            "fp16": {"enabled": False},
             "zero_optimization": {"stage": 2},
-            "zero_allow_untested_optimizer": True,
-            "disable_mpi": True
         }
 
         logger.info("Initializing DeepSpeed...")
