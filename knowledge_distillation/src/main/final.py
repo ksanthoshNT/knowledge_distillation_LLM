@@ -191,7 +191,7 @@ def main():
     parser.add_argument("--warmup_steps", default=500, type=int)
     parser.add_argument("--temperature", default=1.0, type=float)
     parser.add_argument("--output_dir", default="distilled_model", type=str)
-    parser.add_argument("--streaming", type=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--streaming", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--num_samples", default=100, type=int)
     parser.add_argument("--seed", default=42, type=int)
     args = parser.parse_args()
