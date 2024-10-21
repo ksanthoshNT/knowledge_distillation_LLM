@@ -145,7 +145,7 @@ class KnowledgeDistillation:
         logger.info("Loading teacher model...")
         self.teacher_model = AutoModelForCausalLM.from_pretrained(args.teacher_model_name,
                                                                   device_map="auto",
-                                                                  torch_dtype=torch.float16)
+                                                                  torch_dtype=torch.bfloat16)
         self.teacher_model.config.pad_token_id = self.tokenizer.pad_token_id
         # self.teacher_model.gradient_checkpointing_enable()
         self.teacher_model.eval()
