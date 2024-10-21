@@ -82,9 +82,16 @@ class KnowledgeDistillation:
 
         ds_config = {
             "train_micro_batch_size_per_gpu": self.args.batch_size,
-            "gradient_accumulation_steps": 4,
+            "gradient_accumulation_steps": 2,
             "fp16": {"enabled": True},
-            "zero_optimization": {"stage": 2},
+            "zero_optimization": {
+                "stage": 2,
+                "offload_optimizer": {
+                      "device": "cpu",
+                      "pin_memory": True
+                  }
+            },
+
             "optimizer": {
                 "type": "AdamW",
                 "params": {
