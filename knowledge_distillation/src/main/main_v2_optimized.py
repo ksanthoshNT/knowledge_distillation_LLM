@@ -47,7 +47,7 @@ class KnowledgeDistillation:
         print("Teacher model loaded successfully.")
 
     def load_student_model(self, student_model_name=None, target_size=None, precision="float16", load_weights=True):
-        print("Loading student model...")
+        print(f"Loading student model... {student_model_name}")
         dtype = {
             "float16": torch.float16,
             "float32": torch.float32,
