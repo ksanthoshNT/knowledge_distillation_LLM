@@ -11,9 +11,8 @@ import os
 import psutil
 import re
 
-from huggingface_hub import login
-
-login()
+from dotenv import load_dotenv
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
