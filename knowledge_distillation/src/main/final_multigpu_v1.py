@@ -30,6 +30,8 @@ def get_args():
     parser.add_argument("--local_rank", type=int, default=-1)
     parser.add_argument("--kd_ratio", default=0.5, type=float, help="Knowledge distillation loss ratio")
     parser.add_argument("--num_gpus", type=int, default=1)
+    parser.add_argument("--temperature", type=float, default=1.0, help="Temperature for knowledge distillation")
+
 
     # Manually add DeepSpeed arguments
     parser.add_argument("--deepspeed", default=None, type=str,
