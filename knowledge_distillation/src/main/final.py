@@ -23,14 +23,14 @@ class LMDataset:
         if not args.streaming:
             self.data = self.data.shuffle(seed=args.seed)
         self.max_length = args.max_length
-        if args.num_samples:
-            self.data = self.data.take(args.num_samples)
+        if args.dataset_num_samples:
+            self.data = self.data.take(args.dataset_num_samples)
         logger.info(
             f"Dataset loaded. Streaming: {args.streaming}, Max length: {self.max_length}, Samples: {'All' if args.num_samples is None else args.num_samples}"
         )
 
     def __len__(self):
-        return self.args.num_samples if self.args.streaming else len(self.data)
+        return self.args.dataset_num_samples if self.args.streaming else len(self.data)
 
     def __getitem__(self, idx):
         try:
@@ -174,7 +174,7 @@ def main():
     parser.add_argument("--teacher_model_name", default="meta-llama/Llama-3.2-3B-Instruct", type=str)
     parser.add_argument("--student_model_name", default="meta-llama/Llama-3.2-1B-Instruct", type=str)
     parser.add_argument("--dataset_name", default="databricks/databricks-dolly-15k", type=str)
-    parser.add_argument("--num_samples", type=int, default=0, help="Number of samples to process. Use None for full dataset.")
+    parser.add_argument("--dataset_num_samples", type=int, default=0, help="Number of samples to process. Use None for full dataset.")
     parser.add_argument("--dataset_config_name", default=None, type=str)
     parser.add_argument("--max_length", default=128, type=int)
     parser.add_argument("--batch_size", default=2, type=int)
