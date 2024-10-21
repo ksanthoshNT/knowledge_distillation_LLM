@@ -76,7 +76,25 @@ class KnowledgeDistillation:
             "gradient_accumulation_steps": 1,
             "fp16": {"enabled": False},
             "zero_optimization": {"stage": 2},
+            "optimizer": {
+                "type": "AdamW",
+                "params": {
+                    "lr": self.args.learning_rate,
+                    "betas": [0.9, 0.999],
+                    "eps": 1e-8,
+                    "weight_decay": 0.01
+                }
+            }
         }
+
+        model_engine, optimizer, _, _ = deepspeed.initialize(
+            model=self.student_model,
+            model_parameters=self.student_model.parameters(),
+            config=ds_config
+        )
+
+        # Remove the separate optimizer creation
+        # optimizer = torch.optim.AdamW(self.student_model.parameters(), lr=self.args.learning_rate)
 
         logger.info("Initializing DeepSpeed...")
         model_engine, optimizer, _, _ = deepspeed.initialize(model=self.student_model,
