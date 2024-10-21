@@ -46,7 +46,9 @@ def calculate_bleu(reference, candidate):
 def evaluate_models(teacher_model, student_model, tokenizer, dataset, num_samples=10):
     results = []
     for i, example in enumerate(dataset.shuffle().take(num_samples)):
-        input_text = example['text'][:100]  # Take first 100 characters as input
+        question = example['question']
+        query = example['query']
+        input_text = f"Question: {question}\nSQL Query: {query}"
 
         teacher_output = generate_text(teacher_model, tokenizer, input_text)
         student_output = generate_text(student_model, tokenizer, input_text)
