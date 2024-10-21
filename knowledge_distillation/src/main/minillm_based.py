@@ -60,10 +60,14 @@ class KnowledgeDistillation:
         logger.info("Loading teacher model...")
         self.teacher_model = AutoModelForCausalLM.from_pretrained(args.teacher_model_name, torch_dtype=torch.bfloat16)
         self.teacher_model.config.pad_token_id = self.tokenizer.pad_token_id
+        self.teacher_model.gradient_checkpointing_enable()  # Add this line
+        logger.info("Gradient checkpointing enabled for teacher model")
 
         logger.info("Loading student model...")
         self.student_model = AutoModelForCausalLM.from_pretrained(args.student_model_name, torch_dtype=torch.bfloat16)
         self.student_model.config.pad_token_id = self.tokenizer.pad_token_id
+        self.student_model.gradient_checkpointing_enable()  # Add this line
+        logger.info("Gradient checkpointing enabled for student model")
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Using device: {self.device}")
@@ -103,8 +107,8 @@ class KnowledgeDistillation:
         #     }
         # }
         ds_config = {
-            "train_micro_batch_size_per_gpu": 1,  # Reduce to 1
-            "gradient_accumulation_steps": 8,  # Increase to compensate for smaller batch size
+            "train_micro_batch_size_per_gpu": 1,
+            "gradient_accumulation_steps": 16,  # Increased to compensate for smaller batch size
             "fp16": {
                 "enabled": True,
                 "auto_cast": True,
@@ -126,14 +130,15 @@ class KnowledgeDistillation:
                 },
                 "overlap_comm": True,
                 "contiguous_gradients": True,
-                "sub_group_size": 1e9,
-                "reduce_bucket_size": 1e6,
-                "stage3_prefetch_bucket_size": 1e6,
-                "stage3_param_persistence_threshold": 1e4,
-                "stage3_max_live_parameters": 1e9,
-                "stage3_max_reuse_distance": 1e9,
-                "stage3_gather_fp16_weights_on_model_save": True
+                "sub_group_size": 1e6,  # Reduced from 1e9
+                "reduce_bucket_size": 1e5,  # Reduced from 1e6
+                "stage3_prefetch_bucket_size": 1e5,  # Reduced from 1e6
+                "stage3_param_persistence_threshold": 1e3,  # Reduced from 1e4
+                "stage3_max_live_parameters": 1e7,  # Reduced from 1e9
+                "stage3_max_reuse_distance": 1e7,  # Reduced from 1e9
+                "gather_16bit_weights_on_model_save": True
             },
+            "gradient_clipping": 1.0,
             "optimizer": {
                 "type": "AdamW",
                 "params": {
