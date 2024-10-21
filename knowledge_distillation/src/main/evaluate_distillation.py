@@ -72,8 +72,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--teacher_model_name", default="meta-llama/Llama-3.2-3B-Instruct", type=str)
     parser.add_argument("--student_model_path", default="./distilled_model", type=str)
-    parser.add_argument("--dataset_name", default="wikitext", type=str)
-    parser.add_argument("--dataset_config_name", default="wikitext-2-raw-v1", type=str)
+    parser.add_argument("--dataset_name", default="databricks/databricks-dolly-15k", type=str)
+    parser.add_argument("--dataset_config_name", default=None, type=str)
     parser.add_argument("--num_samples", default=10, type=int)
     args = parser.parse_args()
 
