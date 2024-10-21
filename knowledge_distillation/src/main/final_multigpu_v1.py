@@ -75,7 +75,7 @@ The following SQL query best answers the question:
 
 
 def setup_model(args, model_name):
-    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16)
+    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16)
     return model
 
 
