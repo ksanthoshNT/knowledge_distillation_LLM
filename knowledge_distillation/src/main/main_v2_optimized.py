@@ -21,12 +21,19 @@ class KnowledgeDistillation:
 
     def load_teacher_model(self, use_8bit=False, precision="float16"):
         print("Loading teacher model...")
-        dtype = torch.float16 if precision == "float16" else torch.float32
+        dtype = {
+            "float16": torch.float16,
+            "float32": torch.float32,
+            "bfloat16": torch.bfloat16
+        }
+        if dtype.get(precision,None) is None:
+            raise ValueError(f"Invalid precision: {precision}")
+
         self.teacher_model = AutoModelForCausalLM.from_pretrained(
             self.teacher_model_name,
             device_map="auto",
             load_in_8bit=use_8bit,
-            torch_dtype=dtype
+            torch_dtype=dtype[precision]
         )
         self.tokenizer = AutoTokenizer.from_pretrained(self.teacher_model_name)
         if self.tokenizer.pad_token is None:
@@ -40,13 +47,19 @@ class KnowledgeDistillation:
 
     def load_student_model(self, student_model_name=None, target_size=None, precision="float16", load_weights=True):
         print("Loading student model...")
-        dtype = torch.float16 if precision == "float16" else torch.float32
+        dtype = {
+            "float16": torch.float16,
+            "float32": torch.float32,
+            "bfloat16": torch.bfloat16
+        }
+        if dtype.get(precision, None) is None:
+            raise ValueError(f"Invalid precision: {precision}")
         if student_model_name:
             if load_weights:
                 self.student_model = AutoModelForCausalLM.from_pretrained(
                     student_model_name,
                     device_map="auto",
-                    torch_dtype=dtype
+                    torch_dtype=dtype[precision]
                 )
             else:
                 config = AutoConfig.from_pretrained(student_model_name)
@@ -187,11 +200,11 @@ class KnowledgeDistillation:
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Run Knowledge Distillation")
     parser.add_argument("--teacher_model_name", default="meta-llama/Llama-3.2-3B-Instruct", help="Name of the teacher model")
-    parser.add_argument("--teacher_precision", default="float16", help="Precision to use for the teacher model")
+    parser.add_argument("--teacher_precision", default="bfloat16", help="Precision to use for the teacher model")
     parser.add_argument("--dataset_name", default="wikitext", help="Name of the dataset")
     parser.add_argument("--dataset_config_name", default="wikitext-2-raw-v1", help="Configuration name of the dataset")
     parser.add_argument("--student_model_name", default="meta-llama/Llama-3.2-1B-Instruct", help="Name of the student model")
-    parser.add_argument("--student_precision", default="float16", help="Precision to use for the student model")
+    parser.add_argument("--student_precision", default="bfloat16", help="Precision to use for the student model")
     parser.add_argument("--load_student_weights", type=bool, default=True, help="Whether to load the weights for the student model")
     parser.add_argument("--streaming", type=bool, default=True, help="Whether to use streaming for dataset loading")
     parser.add_argument("--batch_size", type=int, default=4, help="Batch size for data preparation")
