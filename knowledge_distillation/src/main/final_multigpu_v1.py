@@ -123,10 +123,16 @@ def train(args, student_model, teacher_model, train_dataset, tokenizer):
     student_model.train()
     teacher_model.eval()
 
+    # Move teacher model to the same device as the student model
+    teacher_device = next(student_model.parameters()).device
+    teacher_model = teacher_model.to(teacher_device)
+
     for epoch in range(args.num_epochs):
         train_sampler.set_epoch(epoch)
         for step, batch in enumerate(tqdm(train_dataloader, desc=f"Epoch {epoch + 1}/{args.num_epochs}")):
-            batch = {k: v.to(student_model.device) for k, v in batch.items()}
+            # batch = {k: v.to(student_model.device) for k, v in batch.items()}
+            batch = {k: v.to(teacher_device) for k, v in batch.items()}
+
 
             student_outputs = student_model(**batch, use_cache=False)
             with torch.no_grad():
