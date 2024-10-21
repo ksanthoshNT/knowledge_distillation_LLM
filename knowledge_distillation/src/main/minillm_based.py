@@ -76,6 +76,8 @@ class KnowledgeDistillation:
             "gradient_accumulation_steps": 1,
             "fp16": {"enabled": True},
             "zero_optimization": {"stage": 2},
+            "zero_allow_untested_optimizer": True,
+            "disable_mpi": True
         }
 
         logger.info("Initializing DeepSpeed...")
