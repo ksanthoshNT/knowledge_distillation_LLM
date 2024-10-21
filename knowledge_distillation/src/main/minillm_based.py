@@ -52,10 +52,19 @@ class KnowledgeDistillation:
         self.args = args
         logger.info(f"Initializing KnowledgeDistillation with args: {args}")
         self.tokenizer = AutoTokenizer.from_pretrained(args.teacher_model_name)
+
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+            logger.info(f"Set padding token to: {self.tokenizer.pad_token}")
+
         logger.info("Loading teacher model...")
         self.teacher_model = AutoModelForCausalLM.from_pretrained(args.teacher_model_name, torch_dtype=torch.bfloat16)
+        self.teacher_model.config.pad_token_id = self.tokenizer.pad_token_id
+
         logger.info("Loading student model...")
         self.student_model = AutoModelForCausalLM.from_pretrained(args.student_model_name, torch_dtype=torch.bfloat16)
+        self.student_model.config.pad_token_id = self.tokenizer.pad_token_id
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Using device: {self.device}")
 
