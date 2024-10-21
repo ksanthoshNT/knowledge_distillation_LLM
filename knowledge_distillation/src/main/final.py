@@ -11,6 +11,10 @@ import os
 import psutil
 import re
 
+from huggingface_hub import login
+
+login()
+
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
