@@ -2,26 +2,28 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, get_linear_schedule_with_warmup
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 from tqdm import tqdm
 import torch.nn.functional as F
 import logging
 import sys
 import os
 import psutil
+import re
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 
 class LMDataset:
     def __init__(self, args, tokenizer, split):
         self.args = args
         self.tokenizer = tokenizer
         logger.info(f"Loading dataset: {args.dataset_name} ({args.dataset_config_name}) - {split}")
-        self.data = load_dataset(path =args.dataset_name, split=split, streaming=args.streaming)
-        logger.info(f"Dataset features: {next(iter(self.data)).keys()}")
-        logger.info(f"Sample data item: {next(iter(self.data))}")
+        self.data = load_from_disk(args.dataset_name)[split]
+        # logger.info(f"Dataset features: {next(iter(self.data)).keys()}")
+        # logger.info(f"Sample data item: {next(iter(self.data))}")
         if not args.streaming:
             self.data = self.data.shuffle(seed=args.seed)
         self.max_length = args.max_length
@@ -37,9 +39,81 @@ class LMDataset:
     def __getitem__(self, idx):
         try:
             item = next(iter(self.data)) if self.args.streaming else self.data[idx]
-            question = item['question']
-            query = item['query']
-            text = f"Question: {question}\nSQL Query: {query}"
+
+            # Extract the SQL query from the 'output' field
+            sql_query = item['output'].strip()
+
+            # Parse the 'input' field
+            input_text = item['input']
+
+            def extract_and_transform(input_string):
+                def transform_schema(schema):
+                    tables = re.split(r'\n\s*\n', schema)
+                    create_statements = []
+                    foreign_keys = []
+
+                    for table in tables:
+                        lines = table.strip().split('\n')
+                        table_name = lines[0].strip(':')
+                        columns = lines[1:]
+
+                        create_statement = f"CREATE TABLE {table_name} (\n"
+                        for column in columns:
+                            parts = column.split('[')
+                            col_name = parts[0].strip()
+                            col_type = parts[1].split(']')[0].strip()
+
+                            if col_type == 'INT':
+                                col_type = 'INTEGER'
+                            elif col_type == 'TEXT':
+                                col_type = 'VARCHAR(100)'
+
+                            create_statement += f"  {col_name} {col_type}"
+
+                            if 'primary_key' in column:
+                                create_statement += " PRIMARY KEY"
+
+                            create_statement += ",\n"
+
+                            if '=' in column:
+                                fk_parts = column.split('=')
+                                fk_table, fk_column = fk_parts[1].strip().split('.')
+                                foreign_keys.append(
+                                    f"-- {table_name}.{col_name} can be joined with {fk_table}.{fk_column}")
+
+                        create_statement = create_statement.rstrip(',\n') + "\n);\n"
+                        create_statements.append(create_statement)
+
+                    return "\n".join(create_statements) + "\n" + "\n".join(foreign_keys)
+
+                # Extract the database schema
+                schema_pattern = r"Here is a database schema:(.*?)Please write me a SQL statement"
+                schema_match = re.search(schema_pattern, input_string, re.DOTALL)
+                db_schema = schema_match.group(1).strip() if schema_match else "Schema not found"
+
+                # Extract the question
+                question_pattern = r"Please write me a SQL statement that answers the following question: (.*?)\s*\[/INST\]"
+                question_match = re.search(question_pattern, input_string, re.DOTALL)
+                question = question_match.group(1).strip() if question_match else "Question not found"
+
+                # Transform the schema
+                transformed_schema = transform_schema(db_schema)
+
+                return transformed_schema, question
+
+            create_table_statements, user_question = extract_and_transform(input_text)
+
+            # Construct the text in the specified format
+            text = f"""<|begin_of_text|><|start_header_id|>user<|end_header_id|>
+
+    Generate a SQL query to answer this question: `{user_question}`
+
+    DDL statements:
+    {create_table_statements}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+    The following SQL query best answers the question `{user_question}`:
+    ```sql
+    {sql_query}"""
             encoded = self.tokenizer(text, truncation=True, max_length=self.max_length, return_tensors='pt')
             return {k: v.squeeze(0) for k, v in encoded.items()}
         except Exception as e:
@@ -53,6 +127,7 @@ class LMDataset:
         except Exception as e:
             logger.error(f"Error in collate_fn: {e}")
             raise
+
 
 class KnowledgeDistillation:
     def __init__(self, args):
@@ -176,11 +251,13 @@ class KnowledgeDistillation:
         self.tokenizer.save_pretrained(output_dir)
         print(f"Distilled model saved to {output_dir}")
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--teacher_model_name", default="meta-llama/Llama-3.2-3B-Instruct", type=str)
     parser.add_argument("--student_model_name", default="meta-llama/Llama-3.2-1B-Instruct", type=str)
-    parser.add_argument("--dataset_name", default="xlangai/spider", type=str)
+    parser.add_argument("--dataset_name",
+                        default="/home/data_science/project_files/santhosh/lamini__spider_text_to_sql", type=str)
     parser.add_argument("--dataset_num_samples", type=int, default=None,
                         help="Number of samples to process. Use None for full dataset.")
     parser.add_argument("--dataset_config_name", default=None, type=str)
@@ -205,6 +282,7 @@ def main():
     except Exception as e:
         logger.error(f"Fatal error: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
