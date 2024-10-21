@@ -28,10 +28,17 @@ def get_args():
     parser.add_argument("--output_dir", default="distilled_model", type=str)
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument("--local_rank", type=int, default=-1)
-    parser.add_argument("--deepspeed", type=str, default=None, help="Path to deepspeed config file.")
     parser.add_argument("--kd_ratio", default=0.5, type=float, help="Knowledge distillation loss ratio")
+    parser.add_argument("--num_gpus", type=int, default=1)
 
-    parser = deepspeed.add_config_arguments(parser)
+    # Manually add DeepSpeed arguments
+    parser.add_argument("--deepspeed", default=None, type=str,
+                        help="Path to deepspeed config file")
+    parser.add_argument("--deepspeed_config", default=None, type=str,
+                        help="Path to deepspeed config json file")
+    parser.add_argument("--zero_stage", default=None, type=int,
+                        help="ZeRO optimization stage for DeepSpeed")
+
     args = parser.parse_args()
     return args
 
@@ -90,11 +97,16 @@ def train(args, student_model, teacher_model, train_dataset, tokenizer):
 
     optimizer_grouped_parameters = get_optimizer_grouped_parameters(student_model, weight_decay=0.01)
 
-    student_model, optimizer, _, _ = deepspeed.initialize(
-        model=student_model,
-        model_parameters=optimizer_grouped_parameters,
-        config=args.deepspeed
-    )
+    if args.deepspeed or args.deepspeed_config:
+        import deepspeed
+        ds_config = args.deepspeed_config if args.deepspeed_config else args.deepspeed
+        student_model, optimizer, _, _ = deepspeed.initialize(
+            model=student_model,
+            model_parameters=optimizer_grouped_parameters,
+            config=ds_config
+        )
+    else:
+        optimizer = torch.optim.AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
 
     lr_scheduler = get_linear_schedule_with_warmup(
         optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=len(train_dataloader) * args.num_epochs
@@ -140,7 +152,10 @@ def train(args, student_model, teacher_model, train_dataset, tokenizer):
 
 def main():
     args = get_args()
-    deepspeed.init_distributed()
+
+    if args.deepspeed or args.deepspeed_config:
+        import deepspeed
+        deepspeed.init_distributed()
 
     torch.manual_seed(args.seed)
     tokenizer = AutoTokenizer.from_pretrained(args.teacher_model_name)
