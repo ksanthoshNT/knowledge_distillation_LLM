@@ -86,7 +86,7 @@ def main():
 
     print("Loading dataset...")
     train_dataset = load_dataset(args.dataset_name, args.dataset_config_name, split="train")
-    test_dataset = load_dataset(args.dataset_name, args.dataset_config_name, split="test")
+    test_dataset = load_dataset(args.dataset_name, args.dataset_config_name, split="validation")
 
     print("Evaluating on training data...")
     train_results = evaluate_models(teacher_model, student_model, tokenizer, train_dataset, args.num_samples)
