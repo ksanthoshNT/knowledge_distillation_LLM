@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch.optim import AdamW
 from datasets import load_dataset
 import re
+from peft import PeftModel, PeftConfig
 
 
 def process_sql_text(input_text, sql_query):
@@ -117,7 +118,14 @@ def main():
         torch_dtype=torch.float16,
         device_map="auto"
     )
-    student_model = AutoModel.from_pretrained(
+    peft_config = PeftConfig.from_pretrained(student_model_name)
+    base_model = AutoModelForCausalLM.from_pretrained(
+        peft_config.base_model_name_or_path,
+        torch_dtype=torch.float16,
+        device_map="auto"
+    )
+    student_model = PeftModel.from_pretrained(
+        base_model,
         student_model_name,
         torch_dtype=torch.float16,
         device_map="auto"
