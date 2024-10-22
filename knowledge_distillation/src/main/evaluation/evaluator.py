@@ -166,8 +166,8 @@ class TransformerEvaluator:
             teacher_model, student_model, tokenizer = self._load_models()
 
             # Load dataset
-            self.logger.info(f"Loading dataset: {self.config.dataset_name}")
-            dataset = load_dataset(self.config.dataset_name, self.config.dataset_config)
+            self.logger.info(f"Loading dataset: {self.config.dataset_config['name']}")
+            dataset = load_dataset(self.config.dataset_config['name'], self.config.dataset_config['config'])
 
             # Evaluate on train and test, validation splits
             DEFAULT_SPLITS = ['train', 'test', 'validation']

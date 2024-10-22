@@ -49,15 +49,13 @@ class TransformerConfig:
         config = configparser.ConfigParser()
         config.read(config_path)
 
-        print(config.sections())
-
         self.model_config = {
             'teacher_model_name': config['models']['teacher_model_name'],
             'student_model_path': config['models']['student_model_path'],
             'device': config['models']['device']
         }
 
-        self.dataset_config = {
+        self.dataset_config:dict = {
             'name': config['dataset']['name'],
             'config': None if config['dataset']['config'] == 'null' else config['dataset']['config'],
             'num_samples': config['dataset'].getint('num_samples'),
