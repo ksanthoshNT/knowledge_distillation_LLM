@@ -302,7 +302,7 @@ if __name__ == "__main__":
     parser.add_argument("--world_size", type=int, default=torch.cuda.device_count(), help="Number of GPUs to use")
 
     args = parser.parse_args()
-    print_args(args)
+    print_arguments(args)
     logger.info(f"Starting script with args: {args}")
 
     world_size = args.world_size
