@@ -106,7 +106,7 @@ class TransformerEvaluator:
         # Set device and batch size
         self.device = torch.device(
             self.config.model_config.get('device', 'cuda' if torch.cuda.is_available() else 'cpu'))
-        self.batch_size = self.config.evaluation_config('batch_size', 8)
+        self.batch_size = self.config.evaluation_config.get('batch_size', 8)
 
 
     def _setup_logging(self):
