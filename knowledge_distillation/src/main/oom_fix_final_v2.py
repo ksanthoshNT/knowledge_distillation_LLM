@@ -140,6 +140,7 @@ class KnowledgeDistillation:
         self.args = args
         self.local_rank = local_rank
         self.device = "auto" if torch.cuda.device_count()==1 else f"cuda:{local_rank}"
+        logger.info(f"device = {self.device}")
 
         logger.info(f"Initializing KnowledgeDistillation with args: {args}")
         self.tokenizer = AutoTokenizer.from_pretrained(args.teacher_model_name)
