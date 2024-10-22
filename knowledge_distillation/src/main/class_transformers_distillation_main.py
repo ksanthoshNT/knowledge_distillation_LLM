@@ -519,7 +519,7 @@ if __name__ == '__main__':
         distillation_type="black_box",  # Using combined distillation
         temperature=2.0,
         alpha=0.5,
-        batch_size=8  # Reduced batch size
+        batch_size=4  # Reduced batch size
     )
 
     # Create model
