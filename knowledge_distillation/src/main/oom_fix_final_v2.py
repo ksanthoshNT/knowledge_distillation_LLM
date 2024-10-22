@@ -226,7 +226,7 @@ class KnowledgeDistillation:
                 try:
                     self.inspect_batch_memory(batch, "Before GPU Transfer")
 
-                    batch = {k: v.to(self.device) for k, v in batch.items()}
+                    batch = {k: v.to("cuda") for k, v in batch.items()}
 
                     self.inspect_batch_memory(batch, "After GPU Transfer")
 
