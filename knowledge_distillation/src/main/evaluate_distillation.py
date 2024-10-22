@@ -10,7 +10,7 @@ from nltk.translate.bleu_score import sentence_bleu
 import nltk
 
 # Download necessary NLTK data
-nltk.download('punkt')
+nltk.download('punkt_tab')
 
 
 def load_model(model_name, device):
