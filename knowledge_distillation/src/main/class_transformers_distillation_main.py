@@ -368,10 +368,11 @@ if __name__ == '__main__':
     # Load dataset
     dataset = load_dataset("lamini/spider_text_to_sql")
 
+
     # Create trainer
     trainer = DistillationTrainer(
         model=model,
-        train_dataset=dataset['train'],
+        train_dataset=dataset['train'].select(range(10)),
         eval_dataset=dataset['validation']
     )
 

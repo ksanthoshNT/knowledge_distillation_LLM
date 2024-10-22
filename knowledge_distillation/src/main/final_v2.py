@@ -1,5 +1,6 @@
 import argparse
 import torch
+from tabulate import tabulate
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, get_linear_schedule_with_warmup
 from datasets import load_dataset, load_from_disk
@@ -274,6 +275,13 @@ def main(rank, world_size, args):
     finally:
         cleanup()
 
+def print_arguments(args):
+    args_dict = vars(args)
+    table_data = [[k, v] for k, v in args_dict.items()]
+    print("\nKnowledge Distillation Arguments:")
+    print(tabulate(table_data, headers=["Argument", "Value"], tablefmt="grid"))
+    print()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--teacher_model_name", default="defog/llama-3-sqlcoder-8b", type=str)
@@ -294,6 +302,7 @@ if __name__ == "__main__":
     parser.add_argument("--world_size", type=int, default=torch.cuda.device_count(), help="Number of GPUs to use")
 
     args = parser.parse_args()
+    print_args(args)
     logger.info(f"Starting script with args: {args}")
 
     world_size = args.world_size
