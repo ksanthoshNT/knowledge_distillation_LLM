@@ -388,8 +388,8 @@ if __name__ == '__main__':
     config = KnowledgeDistillationModelConfig(
         teacher_model_name="meta-llama/Llama-3.2-1B-Instruct",
         student_model_name="meta-llama/Llama-3.2-1B-Instruct",
-        student_model_torch_dtype="bfloat16",
-        teacher_model_torch_dtype="bfloat16",
+        student_model_torch_dtype="float32",
+        teacher_model_torch_dtype="float32",
         distillation_type="white_box",
         temperature=2.0,
         alpha=0.5
