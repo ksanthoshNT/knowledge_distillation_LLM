@@ -49,6 +49,8 @@ class TransformerConfig:
         config = configparser.ConfigParser()
         config.read(config_path)
 
+        print(config.sections())
+
         self.model_config = {
             'teacher_model_name': config['models']['teacher_model_name'],
             'student_model_path': config['models']['student_model_path'],
