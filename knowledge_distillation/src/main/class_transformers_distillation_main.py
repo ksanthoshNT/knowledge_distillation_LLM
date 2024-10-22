@@ -68,7 +68,7 @@ class KnowledgeDistillationModel(PreTrainedModel):
         # Load student model
         self.student = AutoModelForCausalLM.from_pretrained(
             config.student_model_name,
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch.float16,
             device_map="auto",
             use_cache=False
         )
@@ -270,8 +270,6 @@ class DistillationTrainer:
         self.eval_dataset = eval_dataset
         self.checkpoint_dir = checkpoint_dir
         self.checkpoint_frequency = checkpoint_frequency
-        self.gradient_accumulation_steps = 4  # Adjust based on memory
-
 
         # Initialize optimizer with gradient clipping
         self.optimizer = torch.optim.AdamW(
@@ -439,6 +437,8 @@ class DistillationTrainer:
                     batch = {k: v.to(self.config.device) for k, v in batch.items()}
 
                     # Forward pass
+                    if batch_idx==0:
+                        logger.info(f"Eval Batch \n {batch}")
                     outputs = self.model(**batch)
                     loss = outputs["loss"]
 
@@ -451,13 +451,13 @@ class DistillationTrainer:
                     loss.backward()
 
                     # Gradient clipping
-                    if (batch_idx + 1) % self.gradient_accumulation_steps == 0:
-                        torch.nn.utils.clip_grad_norm_(
-                            self.model.student.parameters(),
-                            self.grad_clip
-                        )
-                        self.optimizer.step()
-                        self.optimizer.zero_grad()
+                    torch.nn.utils.clip_grad_norm_(
+                        self.model.student.parameters(),
+                        self.grad_clip
+                    )
+
+                    self.optimizer.step()
+                    self.optimizer.zero_grad()
 
                     total_loss += loss.item()
                     num_batches += 1
