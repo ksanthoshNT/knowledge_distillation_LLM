@@ -258,8 +258,6 @@ class DistillationTrainer:
 
         for example in batch:
             text = transform_text(example)
-            print(text)
-            exit()
             # Assuming the dataset has a 'text' field - modify this based on your dataset structure
             encoded = self.model.tokenizer(
                 text,  # Change this to match your dataset field
