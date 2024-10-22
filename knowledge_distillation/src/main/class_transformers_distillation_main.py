@@ -1,10 +1,12 @@
+import os
+
 import torch
 import torch.nn.functional as F
 from datasets import load_dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    PreTrainedModel
+    PreTrainedModel, PretrainedConfig
 )
 from torch.utils.data import DataLoader, Dataset
 from typing import Optional
@@ -14,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class KnowledgeDistillationModelConfig:
+class KnowledgeDistillationModelConfig(PretrainedConfig):
     """Configuration class for knowledge distillation"""
 
     def __init__(
@@ -30,8 +32,10 @@ class KnowledgeDistillationModelConfig:
             batch_size: int = 8,
             num_epochs: int = 3,
             max_length: int = 512,
-            device: str = "cuda" if torch.cuda.is_available() else "cpu"
+            device: str = "cuda" if torch.cuda.is_available() else "cpu",
+            **kwargs
     ):
+        super().__init__(**kwargs)
         self.teacher_model_name = teacher_model_name
         self.student_model_name = student_model_name
         self.student_model_torch_dtype = student_model_torch_dtype
@@ -48,9 +52,10 @@ class KnowledgeDistillationModelConfig:
 
 class KnowledgeDistillationModel(PreTrainedModel):
     """Main knowledge distillation model combining teacher and student"""
+    config_class = KnowledgeDistillationModelConfig
 
     def __init__(self, config: KnowledgeDistillationModelConfig):
-        self.config = config
+        super().__init__(config)
 
         # Initialize tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(config.teacher_model_name)
@@ -63,13 +68,11 @@ class KnowledgeDistillationModel(PreTrainedModel):
         # Initialize models
         self.teacher = AutoModelForCausalLM.from_pretrained(
             config.teacher_model_name,
-            output_hidden_states=True,
             torch_dtype=self.teacher_dtype
         ).to(config.device)
 
         self.student = AutoModelForCausalLM.from_pretrained(
             config.student_model_name,
-            output_hidden_states=True,
             torch_dtype=self.teacher_dtype
         ).to(config.device)
 
@@ -77,8 +80,6 @@ class KnowledgeDistillationModel(PreTrainedModel):
         for param in self.teacher.parameters():
             param.requires_grad = False
         self.teacher.eval()
-
-        super().__init__(self.student.config)
 
     def _get_dtype(self,dtype:str):
         if dtype == "float16":
@@ -132,31 +133,29 @@ class KnowledgeDistillationModel(PreTrainedModel):
             output_hidden_states=True
         )
 
-        loss = None
-        if labels is not None:
-            # Calculate distillation loss based on type
-            if self.config.distillation_type == "black_box":
-                loss = self.black_box_distillation(
-                    student_outputs.logits,
-                    teacher_outputs.logits
-                )
-            elif self.config.distillation_type == "white_box":
-                loss = self.white_box_distillation(
-                    student_outputs.hidden_states[-1],
-                    teacher_outputs.hidden_states[-1]
-                )
-            else:  # combined
-                bb_loss = self.black_box_distillation(
-                    student_outputs.logits,
-                    teacher_outputs.logits
-                )
-                wb_loss = self.white_box_distillation(
-                    student_outputs.hidden_states[-1],
-                    teacher_outputs.hidden_states[-1]
-                )
-                loss = self.config.alpha * bb_loss + (1 - self.config.alpha) * wb_loss
+        # Calculate distillation loss based on type
+        if self.config.distillation_type == "black_box":
+            loss = self.black_box_distillation(
+                student_outputs.logits,
+                teacher_outputs.logits
+            )
+        elif self.config.distillation_type == "white_box":
+            loss = self.white_box_distillation(
+                student_outputs.hidden_states[-1],
+                teacher_outputs.hidden_states[-1]
+            )
+        else:  # combined
+            bb_loss = self.black_box_distillation(
+                student_outputs.logits,
+                teacher_outputs.logits
+            )
+            wb_loss = self.white_box_distillation(
+                student_outputs.hidden_states[-1],
+                teacher_outputs.hidden_states[-1]
+            )
+            loss = self.config.alpha * bb_loss + (1 - self.config.alpha) * wb_loss
 
-        return {"loss": loss} if loss is not None else student_outputs
+        return {"loss": loss, "logits": student_outputs.logits}
 
 
 class DistillationTrainer:
@@ -166,17 +165,49 @@ class DistillationTrainer:
             self,
             model: KnowledgeDistillationModel,
             train_dataset: Dataset,
-            eval_dataset: Optional[Dataset] = None
+            eval_dataset: Optional[Dataset] = None,
+            checkpoint_dir: str = "checkpoints",  # Add this parameter
+            checkpoint_frequency: int = 1
     ):
         self.model = model
         self.config = model.config
         self.train_dataset = train_dataset
         self.eval_dataset = eval_dataset
+        self.checkpoint_dir = checkpoint_dir
+        self.checkpoint_frequency = checkpoint_frequency
+        self.best_eval_loss = float('inf')
 
         self.optimizer = torch.optim.AdamW(
             self.model.student.parameters(),
             lr=self.config.learning_rate
         )
+        os.makedirs(checkpoint_dir, exist_ok=True)
+
+    def save_checkpoint(self, epoch: int, loss: float, is_best: bool = False):
+        """Save a checkpoint of the model"""
+        checkpoint = {
+            'epoch': epoch,
+            'model_state_dict': self.model.student.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'loss': loss,
+            'config': self.model.config
+        }
+
+        # Save regular checkpoint
+        if epoch % self.checkpoint_frequency == 0:
+            checkpoint_path = os.path.join(
+                self.checkpoint_dir,
+                f'checkpoint_epoch_{epoch}.pt'
+            )
+            torch.save(checkpoint, checkpoint_path)
+            logger.info(f"Saved checkpoint to {checkpoint_path}")
+
+        # Save best model if this is the best loss
+        if is_best:
+            best_model_path = os.path.join(self.checkpoint_dir, 'best_model.pt')
+            torch.save(checkpoint, best_model_path)
+            logger.info(f"Saved best model to {best_model_path}")
+
 
     def train(self):
         """Main training loop"""
@@ -196,7 +227,10 @@ class DistillationTrainer:
                 batch = {k: v.to(self.config.device) for k, v in batch.items()}
 
                 # Forward pass
-                outputs = self.model(**batch)
+                outputs = self.model(
+                    input_ids=batch['input_ids'],
+                    attention_mask=batch.get('attention_mask')
+                )
                 loss = outputs["loss"]
 
                 # Backward pass
@@ -219,6 +253,18 @@ class DistillationTrainer:
             if self.eval_dataset:
                 eval_loss = self.evaluate()
                 logger.info(f"Evaluation loss: {eval_loss:.4f}")
+                is_best = eval_loss < self.best_eval_loss
+                if is_best:
+                    self.best_eval_loss = eval_loss
+            else:
+                is_best = False
+
+                # Save checkpoint
+            self.save_checkpoint(
+                epoch=epoch + 1,
+                loss=avg_loss,
+                is_best=is_best
+            )
 
     def evaluate(self):
         """Evaluation loop"""
