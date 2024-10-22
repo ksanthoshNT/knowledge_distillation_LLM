@@ -503,10 +503,10 @@ if __name__ == '__main__':
     config = KnowledgeDistillationModelConfig(
         # teacher_model_name="meta-llama/Llama-3.2-1B-Instruct",  # Changed model
         teacher_model_name="defog/llama-3-sqlcoder-8b",  # Changed model
+        teacher_model_torch_dtype="float32",
         # student_model_name="meta-llama/Llama-3.2-1B-Instruct",  # Changed model
         student_model_name="aspenita/llama-3-sqlcoder-8b-AWQ",  # Changed model
-        student_model_torch_dtype="float16",
-        teacher_model_torch_dtype="float32",
+        student_model_torch_dtype="float32",
         distillation_type="black_box",  # Using combined distillation
         temperature=2.0,
         alpha=0.5,
@@ -523,7 +523,7 @@ if __name__ == '__main__':
     # Create trainer
     trainer = DistillationTrainer(
         model=model,
-        train_dataset=dataset['train'].select(range(10)),
+        train_dataset=dataset['train'].select(range(30)),
         eval_dataset=dataset['validation'].select(range(10))
     )
 
