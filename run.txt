@@ -1,0 +1,2 @@
+python -m knowledge_distillation.src.main.evaluation.main
+python -m knowledge_distillation.src.main.evaluation.batched_main
