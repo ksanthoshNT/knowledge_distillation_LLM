@@ -167,8 +167,8 @@ def train_step(text, tokenizer, teacher_model, student_model, optimizer, device)
 
 def main():
     # Model configuration
-    teacher_model_name = "defog/llama-3-sqlcoder-8b"
-    student_model_name = "aspenita/llama-3-sqlcoder-8b-AWQ"
+    teacher_model_name = "meta-llama/Llama-3.2-1B-Instruct"
+    student_model_name = "meta-llama/Llama-3.2-1B-Instruct"
     output_dir = "saved_models/student_model"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
