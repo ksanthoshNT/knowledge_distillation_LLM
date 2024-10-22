@@ -25,8 +25,8 @@ class KnowledgeDistillationModelConfig(PretrainedConfig):
             alpha: float = 0.5,
             learning_rate: float = 5e-5,
             batch_size: int = 4,  # Reduced batch size
-            num_epochs: int = 3,
-            max_length: int = 512,
+            num_epochs: int = 5,
+            max_length: int = 256,
             device: str = "cuda" if torch.cuda.is_available() else "cpu",
             **kwargs
     ):
@@ -60,7 +60,7 @@ class KnowledgeDistillationModel(PreTrainedModel):
         # Load teacher model
         self.teacher = AutoModelForCausalLM.from_pretrained(
             config.teacher_model_name,
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch.float16,
             device_map="auto",
             use_cache=False
         )
@@ -90,6 +90,10 @@ class KnowledgeDistillationModel(PreTrainedModel):
         # Convert to log probabilities and probabilities
         student_log_probs = F.log_softmax(student_logits_temp, dim=-1)
         teacher_probs = F.softmax(teacher_logits_temp, dim=-1)
+
+        # Add epsilon to avoid log(0)
+        epsilon = 1e-8
+        teacher_probs = torch.clamp(teacher_probs, min=epsilon)
 
         # Calculate KL divergence
         logger.debug(f"Teacher log shape: {teacher_probs.shape}")
@@ -515,7 +519,7 @@ if __name__ == '__main__':
         distillation_type="black_box",  # Using combined distillation
         temperature=2.0,
         alpha=0.5,
-        batch_size=4  # Reduced batch size
+        batch_size=8  # Reduced batch size
     )
 
     # Create model
