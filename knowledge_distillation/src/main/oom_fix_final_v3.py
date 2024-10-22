@@ -108,7 +108,7 @@ def train_step(text, tokenizer, teacher_model, student_model, optimizer, device)
 def main():
     # Model configuration
     teacher_model_name = "defog/llama-3-sqlcoder-8b"
-    student_model_name = "xyottax/Meta-Llama-3.1-8B-Q4_K_M-GGUF"
+    student_model_name = "aspenita/llama-3-sqlcoder-8b-AWQ"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load models and tokenizer
@@ -118,24 +118,18 @@ def main():
         torch_dtype=torch.float16,
         device_map="auto"
     )
-    # peft_config = PeftConfig.from_pretrained(student_model_name)
-    # base_model = AutoModelForCausalLM.from_pretrained(
-    #     peft_config.base_model_name_or_path,
-    #     torch_dtype=torch.float16,
-    #     device_map="auto"
-    # )
-    # student_model = PeftModel.from_pretrained(
-    #     base_model,
-    #     student_model_name,
-    #     torch_dtype=torch.float16,
-    #     device_map="auto"
-    # )
-    student_model = AutoModel.from_pretrained(
+    peft_config = PeftConfig.from_pretrained(student_model_name)
+    base_model = AutoModelForCausalLM.from_pretrained(
+        peft_config.base_model_name_or_path,
+        torch_dtype=torch.float16,
+        device_map="auto"
+    )
+    student_model = PeftModel.from_pretrained(
+        base_model,
         student_model_name,
         torch_dtype=torch.float16,
         device_map="auto"
     )
-
     for param in student_model.parameters():
         param.requires_grad = True
 
