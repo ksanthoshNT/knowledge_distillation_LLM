@@ -158,6 +158,10 @@ class KnowledgeDistillationModel(PreTrainedModel):
         return {"loss": loss, "logits": student_outputs.logits}
 
 
+def transform_text(example):
+    print(example)
+    return ""
+
 class DistillationTrainer:
     """Trainer class for handling the distillation process"""
 
@@ -188,9 +192,12 @@ class DistillationTrainer:
         attention_mask = []
 
         for example in batch:
+            print(example)
+            text = transform_text(example)
+            exit()
             # Assuming the dataset has a 'text' field - modify this based on your dataset structure
             encoded = self.model.tokenizer(
-                example['question'],  # Change this to match your dataset field
+                text,  # Change this to match your dataset field
                 padding='max_length',
                 truncation=True,
                 max_length=self.config.max_length,
