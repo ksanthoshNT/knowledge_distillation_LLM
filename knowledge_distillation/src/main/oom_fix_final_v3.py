@@ -130,6 +130,8 @@ def main():
         torch_dtype=torch.float16,
         device_map="auto"
     )
+    for param in student_model.parameters():
+        param.requires_grad = True
 
     # Prepare models
     teacher_model.eval()
