@@ -25,8 +25,8 @@ class KnowledgeDistillationModelConfig(PretrainedConfig):
             alpha: float = 0.5,
             learning_rate: float = 5e-5,
             batch_size: int = 4,  # Reduced batch size
-            num_epochs: int = 5,
-            max_length: int = 256,
+            num_epochs: int = 3,
+            max_length: int = 512,
             device: str = "cuda" if torch.cuda.is_available() else "cpu",
             **kwargs
     ):
@@ -60,7 +60,7 @@ class KnowledgeDistillationModel(PreTrainedModel):
         # Load teacher model
         self.teacher = AutoModelForCausalLM.from_pretrained(
             config.teacher_model_name,
-            torch_dtype=torch.float16,
+            torch_dtype=torch.bfloat16,
             device_map="auto",
             use_cache=False
         )
@@ -68,7 +68,7 @@ class KnowledgeDistillationModel(PreTrainedModel):
         # Load student model
         self.student = AutoModelForCausalLM.from_pretrained(
             config.student_model_name,
-            torch_dtype=torch.float16,
+            torch_dtype=torch.bfloat16,
             device_map="auto",
             use_cache=False
         )
@@ -538,8 +538,8 @@ if __name__ == '__main__':
     # Create trainer
     trainer = DistillationTrainer(
         model=model,
-        train_dataset=dataset['train'].select(range(5000)),
-        eval_dataset=dataset['validation'].select(range(1000))
+        train_dataset=dataset['train'].select(range(100)),
+        eval_dataset=dataset['validation'].select(range(100))
     )
 
     # Train model
