@@ -183,6 +183,27 @@ class DistillationTrainer:
         )
         os.makedirs(checkpoint_dir, exist_ok=True)
 
+    def collate_fn(self, batch):
+        input_ids = []
+        attention_mask = []
+
+        for example in batch:
+            # Assuming the dataset has a 'text' field - modify this based on your dataset structure
+            encoded = self.model.tokenizer(
+                example['question'],  # Change this to match your dataset field
+                padding='max_length',
+                truncation=True,
+                max_length=self.config.max_length,
+                return_tensors='pt'
+            )
+            input_ids.append(encoded['input_ids'])
+            attention_mask.append(encoded['attention_mask'])
+
+        return {
+            'input_ids': torch.cat(input_ids, dim=0),
+            'attention_mask': torch.cat(attention_mask, dim=0)
+        }
+
     def save_checkpoint(self, epoch: int, loss: float, is_best: bool = False):
         """Save a checkpoint of the model"""
         checkpoint = {
@@ -214,7 +235,8 @@ class DistillationTrainer:
         train_dataloader = DataLoader(
             self.train_dataset,
             batch_size=self.config.batch_size,
-            shuffle=True
+            shuffle=True,
+            collate_fn=self.collate_fn
         )
 
         logger.info("Starting training...")
@@ -270,7 +292,8 @@ class DistillationTrainer:
         """Evaluation loop"""
         eval_dataloader = DataLoader(
             self.eval_dataset,
-            batch_size=self.config.batch_size
+            batch_size=self.config.batch_size,
+            collate_fn=self.collate_fn
         )
 
         self.model.student.eval()
