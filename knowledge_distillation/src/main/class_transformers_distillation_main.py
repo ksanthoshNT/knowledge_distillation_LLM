@@ -57,7 +57,7 @@ class KnowledgeDistillationModel(PreTrainedModel):
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        self.teacher_dtype = self._get_dtype(config.teacher_model_name)
+        self.teacher_dtype = self._get_dtype(config.teacher_model_torch_dtype)
         self.student_dtype = self._get_dtype(config.student_model_torch_dtype)
 
         # Initialize models
