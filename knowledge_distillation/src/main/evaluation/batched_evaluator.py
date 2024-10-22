@@ -79,6 +79,7 @@ class TextTransformDataset(Dataset):
 
         transformed_schema = transform_schema(db_schema)
 
+
         return f"""<|begin_of_text|><|start_header_id|>user<|end_header_id|>
 
 Generate a SQL query to answer this question: `{question}`
@@ -86,7 +87,9 @@ Generate a SQL query to answer this question: `{question}`
 DDL statements:
 {transformed_schema}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
-The following SQL query best answers the question `{question}`:"""
+The following SQL query best answers the question `{question}`:
+```sql
+"""
 
     def __getitem__(self, idx):
         item = self.data[idx]
