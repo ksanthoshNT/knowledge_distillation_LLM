@@ -433,6 +433,8 @@ class DistillationTrainer:
                     batch = {k: v.to(self.config.device) for k, v in batch.items()}
 
                     # Forward pass
+                    if batch_idx==0:
+                        logger.info(f"Eval Batch \n {batch}")
                     outputs = self.model(**batch)
                     loss = outputs["loss"]
 
@@ -513,7 +515,7 @@ if __name__ == '__main__':
         distillation_type="black_box",  # Using combined distillation
         temperature=2.0,
         alpha=0.5,
-        batch_size=8  # Reduced batch size
+        batch_size=4  # Reduced batch size
     )
 
     # Create model
@@ -522,14 +524,18 @@ if __name__ == '__main__':
     # Load dataset
     dataset = load_dataset("lamini/spider_text_to_sql")
 
+    logger.info(f'Dataset : {dataset}')
+
     dataset = dataset.map(lambda x: transform_text(x))
+
+    logger.info(f"Sample: {dataset['train'][0]}")
 
 
     # Create trainer
     trainer = DistillationTrainer(
         model=model,
-        train_dataset=dataset['train'].select(range(30)),
-        eval_dataset=dataset['validation'].select(range(10))
+        train_dataset=dataset['train'].select(range(100)),
+        eval_dataset=dataset['validation'].select(range(100))
     )
 
     # Train model
