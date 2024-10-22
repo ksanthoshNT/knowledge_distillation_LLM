@@ -179,7 +179,7 @@ class TransformerEvaluator:
                     continue
 
                 self.logger.info(f"Evaluating on {split_name} split...")
-                split_data = dataset[split_name].shuffle().select(range(self.config.num_samples))
+                split_data = dataset[split_name].shuffle().select(range(self.config.dataset_config['num_samples']))
                 results = []
 
                 for idx, example in enumerate(tqdm(split_data, desc=f"Evaluating {split_name}")):
