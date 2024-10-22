@@ -150,7 +150,7 @@ def main():
     parser.add_argument("--teacher_model_name", default="meta-llama/Llama-3.2-3B-Instruct", type=str)
     parser.add_argument("--student_model_path", default="./distilled_model", type=str)
     parser.add_argument("--dataset_name",
-                        default="/home/data_science/project_files/santhosh/lamini__spider_text_to_sql", type=str)
+                        default="lamini/spider_text_to_sql", type=str)
     parser.add_argument("--dataset_config_name", default=None, type=str)
     parser.add_argument("--num_samples", default=10, type=int)
     args = parser.parse_args()
