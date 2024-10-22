@@ -285,6 +285,18 @@ class DistillationTrainer:
 
         os.makedirs(checkpoint_dir, exist_ok=True)
 
+        self.training_history = {
+            'train_loss': [],
+            'eval_loss': [],
+            'train_logit_similarity': [],
+            'train_hidden_similarity': [],
+            'learning_rates': []
+        }
+
+        # Add best model tracking
+        self.best_eval_loss = float('inf')
+        self.best_model_path = os.path.join(checkpoint_dir, 'best_model.pt')
+
     def collate_fn(self, batch):
         texts = [example['input'] for example in batch]
 
@@ -418,7 +430,6 @@ class DistillationTrainer:
 
         return metrics
 
-
     def train(self):
         train_dataloader = DataLoader(
             self.train_dataset,
@@ -430,8 +441,9 @@ class DistillationTrainer:
         logger.info("Starting training...")
         for epoch in range(self.config.num_epochs):
             self.model.student.train()
-            total_loss = 0
-            num_batches = 0
+            epoch_losses = []
+            epoch_logit_similarities = []
+            epoch_hidden_similarities = []
 
             for batch_idx, batch in enumerate(train_dataloader):
                 try:
@@ -442,6 +454,31 @@ class DistillationTrainer:
                     outputs = self.model(**batch)
                     loss = outputs["loss"]
 
+                    # Track batch metrics
+                    with torch.no_grad():
+                        teacher_outputs = self.model.teacher(
+                            input_ids=batch['input_ids'],
+                            attention_mask=batch['attention_mask'],
+                            output_hidden_states=True
+                        )
+                        student_outputs = outputs
+
+                        # Calculate similarities
+                        logit_similarity = F.cosine_similarity(
+                            student_outputs["logits"].view(-1),
+                            teacher_outputs.logits.view(-1),
+                            dim=0
+                        ).mean()
+
+                        hidden_similarity = F.cosine_similarity(
+                            student_outputs.hidden_states[-1].view(-1),
+                            teacher_outputs.hidden_states[-1].view(-1),
+                            dim=0
+                        ).mean()
+
+                        epoch_logit_similarities.append(logit_similarity.item())
+                        epoch_hidden_similarities.append(hidden_similarity.item())
+
                     # Check if loss is valid
                     if not torch.isfinite(loss):
                         logger.warning(f"Skipping batch {batch_idx} due to invalid loss")
@@ -450,7 +487,10 @@ class DistillationTrainer:
                     # Backward pass
                     loss.backward()
 
-                    # Gradient clipping
+                    # Track loss
+                    epoch_losses.append(loss.item())
+
+                    # Gradient accumulation steps
                     if (batch_idx + 1) % self.gradient_accumulation_steps == 0:
                         torch.nn.utils.clip_grad_norm_(
                             self.model.student.parameters(),
@@ -459,39 +499,66 @@ class DistillationTrainer:
                         self.optimizer.step()
                         self.optimizer.zero_grad()
 
-                    total_loss += loss.item()
-                    num_batches += 1
-
+                    # Log progress
                     if batch_idx % 10 == 0:
-                        avg_loss = total_loss / (num_batches) if num_batches > 0 else 0
+                        avg_loss = sum(epoch_losses) / len(epoch_losses)
+                        avg_logit_sim = sum(epoch_logit_similarities) / len(epoch_logit_similarities)
+                        avg_hidden_sim = sum(epoch_hidden_similarities) / len(epoch_hidden_similarities)
+
                         logger.info(
                             f"Epoch: {epoch + 1}/{self.config.num_epochs}, "
                             f"Batch: {batch_idx}, "
                             f"Loss: {loss.item():.4f}, "
-                            f"Avg Loss: {avg_loss:.4f}"
+                            f"Avg Loss: {avg_loss:.4f}, "
+                            f"Avg Logit Sim: {avg_logit_sim:.4f}, "
+                            f"Avg Hidden Sim: {avg_hidden_sim:.4f}"
                         )
 
                 except Exception as e:
                     logger.error(f"Error in batch {batch_idx}: {str(e)}")
                     continue
 
-            if num_batches > 0:
-                avg_loss = total_loss / num_batches
-                logger.info(f"Epoch {epoch + 1} average loss: {avg_loss:.4f}")
+            # End of epoch processing
+            if len(epoch_losses) > 0:
+                # Calculate epoch metrics
+                epoch_avg_loss = sum(epoch_losses) / len(epoch_losses)
+                epoch_avg_logit_sim = sum(epoch_logit_similarities) / len(epoch_logit_similarities)
+                epoch_avg_hidden_sim = sum(epoch_hidden_similarities) / len(epoch_hidden_similarities)
 
-                # Run evaluation after each epoch
-                logger.info(f"Running evaluation after epoch {epoch + 1}...")
+                # Store in training history
+                self.training_history['train_loss'].append(epoch_avg_loss)
+                self.training_history['train_logit_similarity'].append(epoch_avg_logit_sim)
+                self.training_history['train_hidden_similarity'].append(epoch_avg_hidden_sim)
+
+                logger.info(
+                    f"Epoch {epoch + 1} Summary:\n"
+                    f"Average Loss: {epoch_avg_loss:.4f}\n"
+                    f"Average Logit Similarity: {epoch_avg_logit_sim:.4f}\n"
+                    f"Average Hidden Similarity: {epoch_avg_hidden_sim:.4f}"
+                )
+
+                # Run evaluation
                 eval_metrics = self.evaluate()
+                self.training_history['eval_loss'].append(eval_metrics['eval_loss'])
 
-                logger.info(f"Eval metrics after epoch {epoch + 1}... \n {json.dumps(eval_metrics,indent=4)}")
+                # Save best model
+                if eval_metrics['eval_loss'] < self.best_eval_loss:
+                    self.best_eval_loss = eval_metrics['eval_loss']
+                    self.save_checkpoint(self.best_model_path, epoch + 1, eval_metrics)
+                    logger.info(f"New best model saved with eval loss: {self.best_eval_loss:.4f}")
 
-                # Save checkpoint if needed
+                # Regular checkpoint saving
                 if (epoch + 1) % self.checkpoint_frequency == 0:
                     checkpoint_path = os.path.join(
                         self.checkpoint_dir,
                         f"checkpoint_epoch_{epoch + 1}.pt"
                     )
                     self.save_checkpoint(checkpoint_path, epoch + 1, eval_metrics)
+
+                # Save training history
+                history_path = os.path.join(self.checkpoint_dir, 'training_history.json')
+                with open(history_path, 'w') as f:
+                    json.dump(self.training_history, f, indent=4)
 
     def save_checkpoint(self, path: str, epoch: int, metrics: dict):
         """
