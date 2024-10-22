@@ -352,8 +352,8 @@ class DistillationTrainer:
 if __name__ == '__main__':
     # Initialize configuration
     config = KnowledgeDistillationModelConfig(
-        teacher_model_name="meta-llama/Llama-2-7b-chat-hf",  # Changed model
-        student_model_name="meta-llama/Llama-2-7b-chat-hf",  # Changed model
+        teacher_model_name="meta-llama/Llama-3.2-1B-Instruct",  # Changed model
+        student_model_name="meta-llama/Llama-3.2-1B-Instruct",  # Changed model
         student_model_torch_dtype="bfloat16",
         teacher_model_torch_dtype="bfloat16",
         distillation_type="combined",  # Using combined distillation
