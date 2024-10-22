@@ -66,18 +66,26 @@ class KnowledgeDistillationModel(PreTrainedModel):
         self.teacher_dtype = self._get_dtype(config.teacher_model_torch_dtype)
         self.student_dtype = self._get_dtype(config.student_model_torch_dtype)
 
-        # Initialize models
+        # Modified initialization for teacher
         self.teacher = AutoModelForCausalLM.from_pretrained(
             config.teacher_model_name,
-            torch_dtype=self.teacher_dtype,
-            device_map = 'auto'
+            torch_dtype=torch.bfloat16,  # Changed from bfloat16/teacher_dtype
+            device_map="auto",
+            use_cache=False,  # Disable KV cache
+            attn_implementation="eager"  # Use eager attention instead of flash attention
         )
 
+        # Modified initialization for student
         self.student = AutoModelForCausalLM.from_pretrained(
             config.student_model_name,
-            torch_dtype=self.teacher_dtype,
-            device_map='auto'
+            torch_dtype=torch.bfloat16,  # Changed from bfloat16/student_dtype
+            device_map="auto",
+            use_cache=False,  # Disable KV cache
+            attn_implementation="eager"  # Use eager attention instead of flash attention
         )
+
+        # Enable gradient checkpointing for memory efficiency
+        self.student.gradient_checkpointing_enable()
 
         # Freeze teacher parameters
         for param in self.teacher.parameters():
