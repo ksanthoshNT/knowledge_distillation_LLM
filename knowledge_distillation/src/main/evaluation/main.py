@@ -5,6 +5,8 @@ from knowledge_distillation.src.main.evaluation.evaluator import TransformerEval
 def main():
     # 1. Using config.ini file
     evaluator1 = TransformerEvaluator("config.ini")
+    evaluator1.evaluate(split_name='validation')
+    exit()
 
     # 2. Using EvalArguments
     args = EvalArguments(
