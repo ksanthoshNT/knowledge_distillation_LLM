@@ -151,7 +151,7 @@ class KnowledgeDistillation:
         logger.info(f"Before loading teacher model - GPU {local_rank} Memory: {torch.cuda.memory_allocated(local_rank)/1e9:.2f}GB")
         logger.info("Loading teacher model...")
         self.teacher_model = AutoModelForCausalLM.from_pretrained(args.teacher_model_name,
-                                                                  device_map={"": self.device},
+                                                                  device_map="auto",
                                                                   torch_dtype=torch.bfloat16)
         # After loading teacher
         logger.info(
@@ -166,7 +166,7 @@ class KnowledgeDistillation:
 
         logger.info("Loading student model...")
         self.student_model = AutoModelForCausalLM.from_pretrained(args.student_model_name,
-                                                                  device_map={"": self.device},
+                                                                  device_map="auto",
                                                                   torch_dtype=torch.bfloat16)
 
         logger.info(f"After loading student model - GPU {local_rank} Memory: {torch.cuda.memory_allocated(local_rank)/1e9:.2f}GB")
