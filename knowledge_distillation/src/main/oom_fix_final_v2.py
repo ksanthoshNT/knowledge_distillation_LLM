@@ -139,7 +139,6 @@ class KnowledgeDistillation:
     def __init__(self, args, local_rank):
         self.args = args
         self.local_rank = local_rank
-        self.device = torch.device(f"cuda:{local_rank}")
         self.device = "auto" if torch.cuda.device_count()==1 else f"cuda:{local_rank}"
 
         logger.info(f"Initializing KnowledgeDistillation with args: {args}")

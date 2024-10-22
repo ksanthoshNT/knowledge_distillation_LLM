@@ -1,2 +1,6 @@
 python -m knowledge_distillation.src.main.evaluation.main
 python -m knowledge_distillation.src.main.evaluation.batched_main
+
+
+=============================
+python -m knowledge_distillation.src.main.oom_fix_final_v2 --teacher_model_name meta-llama/Llama-3.2-1B-Instruct --student_model_name meta-llama/Llama-3.2-3B-Instruct --batch_size 4  --dataset_num_samples 20
