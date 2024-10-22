@@ -14,6 +14,20 @@ import warnings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def normalize_sql(query):
+    """Normalize SQL query for comparison"""
+    # Remove extra whitespace and convert to lowercase
+    query = ' '.join(query.lower().split())
+    # Remove semicolon at the end if present
+    query = query.rstrip(';')
+    return query
+
+
+def extract_sql_query(text):
+    """Extract SQL query from generated text"""
+    sql_pattern = r"```sql\n(.*?)```"
+    match = re.search(sql_pattern, text, re.DOTALL)
+    return match.group(1).strip() if match else text.strip()
 
 def process_sql_text(input_text, sql_query):
     """Process input text to extract schema and question"""
