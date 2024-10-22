@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import torch
@@ -288,6 +289,123 @@ class DistillationTrainer:
             'attention_mask': encodings['attention_mask']
         }
 
+    def evaluate(self):
+        """
+        Evaluate the model on the evaluation dataset.
+        Returns:
+            dict: Dictionary containing evaluation metrics
+        """
+        if self.eval_dataset is None:
+            logger.warning("No evaluation dataset provided. Skipping evaluation.")
+            return {}
+
+        self.model.student.eval()
+        total_loss = 0
+        num_batches = 0
+
+        eval_dataloader = DataLoader(
+            self.eval_dataset,
+            batch_size=self.config.batch_size,
+            shuffle=False,
+            collate_fn=self.collate_fn
+        )
+
+        # Initialize metrics
+        metrics = {
+            'eval_loss': 0.0,
+            'teacher_student_logit_similarity': 0.0,
+            'teacher_student_hidden_similarity': 0.0
+        }
+
+        logger.info("Starting evaluation...")
+        with torch.no_grad():
+            for batch_idx, batch in enumerate(eval_dataloader):
+                try:
+                    # Move batch to device
+                    batch = {k: v.to(self.config.device) for k, v in batch.items()}
+
+                    # Get teacher outputs
+                    teacher_outputs = self.model.teacher(
+                        input_ids=batch['input_ids'],
+                        attention_mask=batch['attention_mask'],
+                        output_hidden_states=True
+                    )
+
+                    # Get student outputs
+                    student_outputs = self.model.student(
+                        input_ids=batch['input_ids'],
+                        attention_mask=batch['attention_mask'],
+                        output_hidden_states=True
+                    )
+
+                    # Calculate loss based on distillation type
+                    if self.config.distillation_type == "black_box":
+                        loss = self.model.black_box_distillation(
+                            student_outputs.logits,
+                            teacher_outputs.logits,
+                            batch['attention_mask']
+                        )
+                    elif self.config.distillation_type == "white_box":
+                        loss = self.model.white_box_distillation(
+                            student_outputs.hidden_states[-1],
+                            teacher_outputs.hidden_states[-1],
+                            batch['attention_mask']
+                        )
+                    else:  # combined
+                        bb_loss = self.model.black_box_distillation(
+                            student_outputs.logits,
+                            teacher_outputs.logits,
+                            batch['attention_mask']
+                        )
+                        wb_loss = self.model.white_box_distillation(
+                            student_outputs.hidden_states[-1],
+                            teacher_outputs.hidden_states[-1],
+                            batch['attention_mask']
+                        )
+                        loss = self.config.alpha * bb_loss + (1 - self.config.alpha) * wb_loss
+
+                    # Calculate additional metrics
+                    logit_similarity = F.cosine_similarity(
+                        student_outputs.logits.view(-1),
+                        teacher_outputs.logits.view(-1),
+                        dim=0
+                    ).mean()
+
+                    hidden_similarity = F.cosine_similarity(
+                        student_outputs.hidden_states[-1].view(-1),
+                        teacher_outputs.hidden_states[-1].view(-1),
+                        dim=0
+                    ).mean()
+
+                    # Update metrics
+                    metrics['eval_loss'] += loss.item()
+                    metrics['teacher_student_logit_similarity'] += logit_similarity.item()
+                    metrics['teacher_student_hidden_similarity'] += hidden_similarity.item()
+                    num_batches += 1
+
+                    if batch_idx % 10 == 0:
+                        logger.info(
+                            f"Evaluation Batch: {batch_idx}, "
+                            f"Loss: {loss.item():.4f}, "
+                            f"Logit Similarity: {logit_similarity.item():.4f}, "
+                            f"Hidden Similarity: {hidden_similarity.item():.4f}"
+                        )
+
+                except Exception as e:
+                    logger.error(f"Error in evaluation batch {batch_idx}: {str(e)}")
+                    continue
+
+        # Calculate average metrics
+        if num_batches > 0:
+            metrics = {k: v / num_batches for k, v in metrics.items()}
+
+        logger.info("Evaluation Results:")
+        for metric_name, metric_value in metrics.items():
+            logger.info(f"{metric_name}: {metric_value:.4f}")
+
+        return metrics
+
+
     def train(self):
         train_dataloader = DataLoader(
             self.train_dataset,
@@ -347,6 +465,33 @@ class DistillationTrainer:
             if num_batches > 0:
                 avg_loss = total_loss / num_batches
                 logger.info(f"Epoch {epoch + 1} average loss: {avg_loss:.4f}")
+
+                # Run evaluation after each epoch
+                logger.info(f"Running evaluation after epoch {epoch + 1}...")
+                eval_metrics = self.evaluate()
+
+                logger.info(f"Eval metrics after epoch {epoch + 1}... \n {json.dumps(eval_metrics,indent=4)}")
+
+                # Save checkpoint if needed
+                if (epoch + 1) % self.checkpoint_frequency == 0:
+                    checkpoint_path = os.path.join(
+                        self.checkpoint_dir,
+                        f"checkpoint_epoch_{epoch + 1}.pt"
+                    )
+                    self.save_checkpoint(checkpoint_path, epoch + 1, eval_metrics)
+
+    def save_checkpoint(self, path: str, epoch: int, metrics: dict):
+        """
+        Save a checkpoint of the model.
+        """
+        checkpoint = {
+            'epoch': epoch,
+            'model_state_dict': self.model.student.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'metrics': metrics
+        }
+        torch.save(checkpoint, path)
+        logger.info(f"Saved checkpoint to {path}")
 
 
 if __name__ == '__main__':
