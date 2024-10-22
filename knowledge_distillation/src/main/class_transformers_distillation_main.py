@@ -519,8 +519,8 @@ if __name__ == '__main__':
     # Create trainer
     trainer = DistillationTrainer(
         model=model,
-        train_dataset=dataset['train'].select(range(10)),
-        eval_dataset=dataset['validation']
+        train_dataset=dataset['train'].select(range(25)),
+        eval_dataset=dataset['validation'].select(range(25))
     )
 
     # Train model
