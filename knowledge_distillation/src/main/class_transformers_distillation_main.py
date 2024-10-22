@@ -14,13 +14,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class DistillationConfig:
+class KnowledgeDistillationModelConfig:
     """Configuration class for knowledge distillation"""
 
     def __init__(
             self,
             teacher_model_name: str,
             student_model_name: str,
+            student_model_torch_dtype:str = 'bfloat16',
+            teacher_model_torch_dtype:str = 'bfloat16',
             distillation_type: str = "combined",  # "black_box", "white_box", or "combined"
             temperature: float = 2.0,
             alpha: float = 0.5,
@@ -32,6 +34,8 @@ class DistillationConfig:
     ):
         self.teacher_model_name = teacher_model_name
         self.student_model_name = student_model_name
+        self.student_model_torch_dtype = student_model_torch_dtype
+        self.teacher_model_torch_dtype = teacher_model_torch_dtype
         self.distillation_type = distillation_type
         self.temperature = temperature
         self.alpha = alpha
@@ -45,7 +49,7 @@ class DistillationConfig:
 class KnowledgeDistillationModel(PreTrainedModel):
     """Main knowledge distillation model combining teacher and student"""
 
-    def __init__(self, config: DistillationConfig):
+    def __init__(self, config: KnowledgeDistillationModelConfig):
         self.config = config
 
         # Initialize tokenizer
@@ -56,12 +60,14 @@ class KnowledgeDistillationModel(PreTrainedModel):
         # Initialize models
         self.teacher = AutoModelForCausalLM.from_pretrained(
             config.teacher_model_name,
-            output_hidden_states=True
+            output_hidden_states=True,
+            torch_dtype=self._get_dtype(config.teacher_model_torch_dtype)
         ).to(config.device)
 
         self.student = AutoModelForCausalLM.from_pretrained(
             config.student_model_name,
-            output_hidden_states=True
+            output_hidden_states=True,
+            torch_dtype=self._get_dtype(config.student_model_torch_dtype)
         ).to(config.device)
 
         # Freeze teacher parameters
@@ -70,6 +76,16 @@ class KnowledgeDistillationModel(PreTrainedModel):
         self.teacher.eval()
 
         super().__init__(self.student.config)
+
+    def _get_dtype(self,dtype:str):
+        if dtype == "float16":
+            return torch.float16
+        elif dtype == "float32":
+            return torch.float32
+        elif dtype == "bfloat16":
+            return torch.bfloat16
+        else:
+            raise ValueError("Invalid dtype")
 
     def black_box_distillation(self, student_logits: torch.Tensor, teacher_logits: torch.Tensor) -> torch.Tensor:
         """Compute black box distillation loss using KL divergence"""
@@ -227,9 +243,11 @@ class DistillationTrainer:
 if __name__ == '__main__':
 
     # Initialize configuration
-    config = DistillationConfig(
-        teacher_model_name="large-sql-model",
-        student_model_name="small-sql-model",
+    config = KnowledgeDistillationModelConfig(
+        teacher_model_name="meta-llama/Llama-3.2-1B-Instruct",
+        student_model_name="meta-llama/Llama-3.2-1B-Instruct",
+        student_model_torch_dtype="bfloat16",
+        teacher_model_torch_dtype="bfloat16",
         distillation_type="white_box",
         temperature=2.0,
         alpha=0.5
