@@ -244,7 +244,10 @@ def transform_text(example):
         The following SQL query best answers the question `{question}`:
         ```sql
         {output}"""
-    return text
+    return {
+        "input":text,
+        "output":output
+    }
 
 
 
@@ -277,11 +280,11 @@ class DistillationTrainer:
         os.makedirs(checkpoint_dir, exist_ok=True)
 
     def collate_fn(self, batch):
-        texts = [transform_text(example) for example in batch]
+        # texts = [transform_text(example) for example in batch]
 
         # Tokenize all texts in batch
         encodings = self.model.tokenizer(
-            texts,
+            batch,
             padding=True,
             truncation=True,
             max_length=self.config.max_length,
@@ -510,7 +513,7 @@ if __name__ == '__main__':
         distillation_type="black_box",  # Using combined distillation
         temperature=2.0,
         alpha=0.5,
-        batch_size=2  # Reduced batch size
+        batch_size=8  # Reduced batch size
     )
 
     # Create model
@@ -518,6 +521,8 @@ if __name__ == '__main__':
 
     # Load dataset
     dataset = load_dataset("lamini/spider_text_to_sql")
+
+    dataset = dataset.map(lambda x: transform_text(x))
 
 
     # Create trainer
