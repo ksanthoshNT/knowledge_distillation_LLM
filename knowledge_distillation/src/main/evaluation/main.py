@@ -1,10 +1,14 @@
+from pathlib import Path
+
 from knowledge_distillation.src.main.evaluation.eval_args import EvalArguments
 from knowledge_distillation.src.main.evaluation.evaluator import TransformerEvaluator
 
 
 def main():
     # 1. Using config.ini file
-    evaluator1 = TransformerEvaluator("./config.ini")
+    dir_path = Path(__file__).parent
+    config_path =  str( dir_path / "config.ini")
+    evaluator1 = TransformerEvaluator(config_path)
     evaluator1.evaluate(split_name='validation')
     exit()
 
