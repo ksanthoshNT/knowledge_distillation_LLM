@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModel
 import torch
 import torch.nn.functional as F
 from torch.optim import AdamW
@@ -117,7 +117,7 @@ def main():
         torch_dtype=torch.float16,
         device_map="auto"
     )
-    student_model = AutoModelForCausalLM.from_pretrained(
+    student_model = AutoModel.from_pretrained(
         student_model_name,
         torch_dtype=torch.float16,
         device_map="auto"
