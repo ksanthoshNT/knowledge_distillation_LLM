@@ -280,11 +280,11 @@ class DistillationTrainer:
         os.makedirs(checkpoint_dir, exist_ok=True)
 
     def collate_fn(self, batch):
-        # texts = [transform_text(example) for example in batch]
+        texts = [example['input'] for example in batch]
 
         # Tokenize all texts in batch
         encodings = self.model.tokenizer(
-            batch,
+            texts,
             padding=True,
             truncation=True,
             max_length=self.config.max_length,
