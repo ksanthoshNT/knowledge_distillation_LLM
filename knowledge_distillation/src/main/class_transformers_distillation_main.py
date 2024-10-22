@@ -69,13 +69,15 @@ class KnowledgeDistillationModel(PreTrainedModel):
         # Initialize models
         self.teacher = AutoModelForCausalLM.from_pretrained(
             config.teacher_model_name,
-            torch_dtype=self.teacher_dtype
-        ).to(config.device)
+            torch_dtype=self.teacher_dtype,
+            device_map = 'auto'
+        )
 
         self.student = AutoModelForCausalLM.from_pretrained(
             config.student_model_name,
-            torch_dtype=self.teacher_dtype
-        ).to(config.device)
+            torch_dtype=self.teacher_dtype,
+            device_map='auto'
+        )
 
         # Freeze teacher parameters
         for param in self.teacher.parameters():
@@ -388,8 +390,8 @@ if __name__ == '__main__':
     config = KnowledgeDistillationModelConfig(
         teacher_model_name="meta-llama/Llama-3.2-1B-Instruct",
         student_model_name="meta-llama/Llama-3.2-1B-Instruct",
-        student_model_torch_dtype="float32",
-        teacher_model_torch_dtype="float32",
+        student_model_torch_dtype="bfloat16",
+        teacher_model_torch_dtype="bfloat16",
         distillation_type="white_box",
         temperature=2.0,
         alpha=0.5
