@@ -71,6 +71,10 @@ class TransformerConfig:
             'top_p': config['generation'].getfloat('top_p')
         }
 
+        self.evaluation_config = {
+            "batch_size": config['evalution'].getint('batch_size')
+        }
+
     def _load_from_args(self, args: EvalArguments):
         """Load configuration from EvalArguments."""
         self.model_config = {
