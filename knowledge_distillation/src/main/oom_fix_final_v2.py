@@ -148,30 +148,65 @@ class KnowledgeDistillation:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             logger.info(f"Set padding token to: {self.tokenizer.pad_token}")
 
+        logger.info(f"Before loading teacher model - GPU {local_rank} Memory: {torch.cuda.memory_allocated(local_rank)/1e9:.2f}GB")
         logger.info("Loading teacher model...")
         self.teacher_model = AutoModelForCausalLM.from_pretrained(args.teacher_model_name,
                                                                   device_map={"": self.device},
                                                                   torch_dtype=torch.bfloat16)
+        # After loading teacher
+        logger.info(
+            f"After loading teacher model - GPU {local_rank} Memory: {torch.cuda.memory_allocated(local_rank) / 1e9:.2f}GB")
+
         self.teacher_model.config.pad_token_id = self.tokenizer.pad_token_id
         self.teacher_model.eval()
+
+        # Before loading student
+        logger.info(
+            f"Before loading student model - GPU {local_rank} Memory: {torch.cuda.memory_allocated(local_rank) / 1e9:.2f}GB")
 
         logger.info("Loading student model...")
         self.student_model = AutoModelForCausalLM.from_pretrained(args.student_model_name,
                                                                   device_map={"": self.device},
                                                                   torch_dtype=torch.bfloat16)
+
+        logger.info(f"After loading student model - GPU {local_rank} Memory: {torch.cuda.memory_allocated(local_rank)/1e9:.2f}GB")
+
+
         self.student_model.config.pad_token_id = self.tokenizer.pad_token_id
         self.student_model.gradient_checkpointing_enable()
         self.student_model = DDP(self.student_model, device_ids=[local_rank])
 
         logger.info(f"Using device: {self.device}")
 
+    def inspect_batch_memory(self, batch, phase=""):
+        total_size = 0
+        logger.info(f"\n--- Memory Inspection for {phase} ---")
+        for k, v in batch.items():
+            size_mb = v.element_size() * v.nelement() / 1024 / 1024
+            logger.info(f"Batch tensor {k}: Shape {v.shape}, Size {size_mb:.2f}MB")
+            total_size += size_mb
+        logger.info(f"Total batch size: {total_size:.2f}MB")
+        logger.info(f"Current GPU Memory Usage: {torch.cuda.memory_allocated(self.local_rank) / 1e9:.2f}GB")
+        logger.info("-----------------------------------\n")
+
     def train(self):
         logger.info("Starting training process...")
+        logger.info(
+            f"Before dataset loading - GPU {self.local_rank} Memory: {torch.cuda.memory_allocated(self.local_rank) / 1e9:.2f}GB")
+
         train_dataset = LMDataset(self.args, self.tokenizer, "train")
         eval_dataset = LMDataset(self.args, self.tokenizer, "validation")
 
         train_sampler = DistributedSampler(train_dataset, num_replicas=dist.get_world_size(), rank=self.local_rank)
         eval_sampler = DistributedSampler(eval_dataset, num_replicas=dist.get_world_size(), rank=self.local_rank)
+
+        # After dataset loading
+        logger.info(
+            f"After dataset loading - GPU {self.local_rank} Memory: {torch.cuda.memory_allocated(self.local_rank) / 1e9:.2f}GB")
+
+        # Before DataLoader creation
+        logger.info(
+            f"Before DataLoader creation - GPU {self.local_rank} Memory: {torch.cuda.memory_allocated(self.local_rank) / 1e9:.2f}GB")
 
         train_loader = DataLoader(train_dataset, batch_size=self.args.batch_size, sampler=train_sampler,
                                   collate_fn=train_dataset.collate_fn)
@@ -188,19 +223,32 @@ class KnowledgeDistillation:
 
             for batch_idx, batch in enumerate(tqdm(train_loader, desc=f"Epoch {epoch + 1}/{self.args.num_epochs}", disable=self.local_rank != 0)):
                 try:
+                    self.inspect_batch_memory(batch, "Before GPU Transfer")
+
                     batch = {k: v.to(self.device) for k, v in batch.items()}
+
+                    self.inspect_batch_memory(batch, "After GPU Transfer")
 
                     with torch.no_grad():
                         teacher_outputs = self.teacher_model(**batch)
+                        self.inspect_batch_memory(batch, "After Teacher Forward")
 
                     student_outputs = self.student_model(**batch)
+                    self.inspect_batch_memory(batch, "After Student Forward")
 
                     loss = self.distillation_loss(student_outputs.logits, teacher_outputs.logits, batch['input_ids'], self.args.temperature)
 
                     loss.backward()
+                    self.inspect_batch_memory(batch, "After Backward Pass")
+
                     optimizer.step()
+                    logger.info(
+                        f"Epoch {epoch}, Batch {batch_idx} - After optimizer step - GPU {self.local_rank} Memory: {torch.cuda.memory_allocated(self.local_rank) / 1e9:.2f}GB")
+
+
                     scheduler.step()
                     optimizer.zero_grad()
+                    self.inspect_batch_memory(batch, "After Optimization")
 
                     if batch_idx % 100 == 0 and self.local_rank == 0:
                         logger.info(f"Epoch {epoch + 1}, Batch {batch_idx}, Loss: {loss.item():.4f}")
