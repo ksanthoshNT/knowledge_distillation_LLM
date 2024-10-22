@@ -92,6 +92,10 @@ class KnowledgeDistillationModel(PreTrainedModel):
         teacher_probs = F.softmax(teacher_logits_temp, dim=-1)
 
         # Calculate KL divergence
+        logger.debug(f"Teacher log shape: {teacher_probs.shape}")
+        logger.debug(f"Student log shape: {student_log_probs.shape}")
+        logger.debug(f"Attent Mask : {attention_mask is not None}")
+
         loss = F.kl_div(
             student_log_probs.view(-1, student_log_probs.size(-1)),
             teacher_probs.view(-1, teacher_probs.size(-1)),
@@ -519,8 +523,8 @@ if __name__ == '__main__':
     # Create trainer
     trainer = DistillationTrainer(
         model=model,
-        train_dataset=dataset['train'].select(range(25)),
-        eval_dataset=dataset['validation'].select(range(25))
+        train_dataset=dataset['train'].select(range(10)),
+        eval_dataset=dataset['validation'].select(range(10))
     )
 
     # Train model
