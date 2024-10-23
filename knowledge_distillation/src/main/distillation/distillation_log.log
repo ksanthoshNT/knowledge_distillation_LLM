@@ -1,0 +1,51 @@
+INFO:accelerate.utils.modeling:We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:03,  1.17s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:02<00:02,  1.08s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:03<00:01,  1.01s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.39it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:03<00:00,  1.18it/s]
+/workspace/venv/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:601: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`. This was detected when initializing the generation config instance, which means the corresponding file may hold incorrect parameterization and should be fixed.
+  warnings.warn(
+/workspace/venv/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:601: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+We suggest you to set `torch_dtype=torch.float16` for better efficiency with AWQ.
+INFO:accelerate.utils.modeling:We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:06<00:06,  6.54s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:07<00:00,  3.19s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:07<00:00,  3.70s/it]
+INFO:__main__:Dataset : DatasetDict({
+    train: Dataset({
+        features: ['input', 'output'],
+        num_rows: 7000
+    })
+    validation: Dataset({
+        features: ['input', 'output'],
+        num_rows: 1034
+    })
+})
+INFO:__main__:Sample: {'input': '<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\nGenerate a SQL query to answer this question: `How many heads of the departments are older than 56 ?`\n\nDDL statements:\nCREATE TABLE department  (\n  Department_ID INTEGER PRIMARY KEY,\n  Name VARCHAR(100),\n  Creation VARCHAR(100),\n  Ranking INTEGER,\n  Budget_in_Billions INTEGER,\n  Num_Employees INTEGER\n);\n\nCREATE TABLE head  (\n  head_ID INTEGER PRIMARY KEY,\n  name VARCHAR(100),\n  born_state VARCHAR(100),\n  age INTEGER\n);\n\nCREATE TABLE management  (\n  department_ID INTEGER PRIMARY KEY,\n  head_ID INTEGER,\n  temporary_acting VARCHAR(100)\n);\n\n-- management .department_ID can be joined with department.Department_ID\n-- management .head_ID can be joined with head.head_ID<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\nThe following SQL query best answers the question `How many heads of the departments are older than 56 ?`:\n```sql\nSELECT count(*) FROM head WHERE age  >  56;\n', 'output': 'SELECT count(*) FROM head WHERE age  >  56;'}
+INFO:__main__:Starting training...
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+INFO:__main__:Epoch: 1/3, Step: 100, Loss: 0.0996
+INFO:__main__:Epoch: 1/3, Step: 200, Loss: 0.0628
+INFO:__main__:Epoch: 1/3, Step: 300, Loss: 0.0551
+INFO:__main__:Epoch: 1/3, Step: 400, Loss: 0.0771
+INFO:__main__:Epoch: 1/3, Step: 500, Loss: 0.0867
+INFO:__main__:Evaluation completed in 147.50s. Loss: 0.0896
+INFO:__main__:Evaluation metrics: {'eval_loss': 0.08959797121584416}
+INFO:__main__:Saved best model with eval loss 0.0896 to checkpoints/best_model.pt
+INFO:__main__:Epoch: 1/3, Step: 600, Loss: 0.0630
+INFO:__main__:Epoch: 1/3, Step: 700, Loss: 0.0670
+INFO:__main__:Epoch: 1/3, Step: 800, Loss: 0.0577
+INFO:__main__:Epoch: 1/3, Step: 900, Loss: 0.0660
+INFO:__main__:Epoch: 1/3, Step: 1000, Loss: 0.0499
+INFO:__main__:Evaluation completed in 147.53s. Loss: 0.0835
+INFO:__main__:Evaluation metrics: {'eval_loss': 0.08354302002489566}
+INFO:__main__:Saved best model with eval loss 0.0835 to checkpoints/best_model.pt
+INFO:__main__:Epoch: 1/3, Step: 1100, Loss: 0.0408
+INFO:__main__:Epoch: 1/3, Step: 1200, Loss: 0.0464
+INFO:__main__:Epoch 1 completed 2956.85s. Average loss: 0.0687
+INFO:__main__:Epoch: 2/3, Step: 1300, Loss: 0.0380
+INFO:__main__:Epoch: 2/3, Step: 1400, Loss: 0.0352
+INFO:__main__:Epoch: 2/3, Step: 1500, Loss: 0.0369
+INFO:__main__:Evaluation completed in 147.36s. Loss: 0.0814
+INFO:__main__:Evaluation metrics: {'eval_loss': 0.08137188443541526}
+INFO:__main__:Epoch: 2/3, Step: 1600, Loss: 0.0514
+INFO:__main__:Epoch: 2/3, Step: 1700, Loss: 0.0406
+INFO:__main__:Epoch: 2/3, Step: 1800, Loss: 0.0409
+INFO:__main__:Epoch: 2/3, Step: 1900, Loss: 0.0406
+INFO:__main__:Epoch: 2/3, Step: 2000, Loss: 0.0345
