@@ -481,11 +481,11 @@ if __name__ == '__main__':
         student_model_name="aspenita/llama-3-sqlcoder-8b-AWQ",  # Changed model
         student_model_torch_dtype="float32",
         distillation_type="black_box",  # Using combined distillation
-        learning_rate=3e-5,  # Slightly reduced for stability
         temperature=2.0,
         alpha=0.5,
-        batch_size=2,  # Reduced batch size
-        num_epochs=5
+        batch_size=4,  # Reduced batch size
+        num_epochs=3,
+        max_length=256
     )
 
     # Create model
@@ -504,15 +504,15 @@ if __name__ == '__main__':
     trainer = DistillationTrainer(
         model=model,
         training_config=TrainingConfig(
-            evaluation_steps=50,
-            save_steps=50,
+            evaluation_steps=500,
+            save_steps=2500,
             warmup_steps=500,
             early_stopping_patience=3,
             early_stopping_threshold=0.005
 
         ),
-        train_dataset=dataset['train'].select(range(100)),
-        eval_dataset=dataset['validation'].select(range(100))
+        train_dataset=dataset['train'].select(range(5000)),
+        eval_dataset=dataset['validation'].select(range(1000))
     )
 
     # Train model
