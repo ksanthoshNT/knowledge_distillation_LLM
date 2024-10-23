@@ -504,7 +504,7 @@ if __name__ == '__main__':
     trainer = DistillationTrainer(
         model=model,
         training_config=TrainingConfig(
-            evaluation_steps=250,
+            evaluation_steps=50,
             save_steps=50,
             warmup_steps=500,
             early_stopping_patience=3,
