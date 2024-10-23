@@ -505,14 +505,14 @@ if __name__ == '__main__':
         model=model,
         training_config=TrainingConfig(
             evaluation_steps=250,
-            save_steps=10,
+            save_steps=50,
             warmup_steps=500,
             early_stopping_patience=3,
             early_stopping_threshold=0.005
 
         ),
-        train_dataset=dataset['train'].select(range(50)),
-        eval_dataset=dataset['validation'].select(range(10))
+        train_dataset=dataset['train'].select(range(100)),
+        eval_dataset=dataset['validation'].select(range(100))
     )
 
     # Train model
