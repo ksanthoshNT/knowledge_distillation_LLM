@@ -68,7 +68,7 @@ class KnowledgeDistillationModel(PreTrainedModel):
         # Load student model
         self.student = AutoModelForCausalLM.from_pretrained(
             config.student_model_name,
-            torch_dtype=torch.bfloat16,
+            torch_dtype=torch.float16,
             device_map="auto",
             use_cache=False
         )
