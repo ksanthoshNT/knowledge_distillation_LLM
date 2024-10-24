@@ -57,7 +57,8 @@ def convert_existing_to_huggingface():
     tokenizer = AutoTokenizer.from_pretrained("aspenita/llama-3-sqlcoder-8b-AWQ")
 
     # Load your saved weights
-    model.load_state_dict(torch.load("/home/data_science/project_files/santhosh/knowledge_distillation_LLM/knowledge_distillation/src/main/distillation/best_model.pt"))
+    checkpoint= torch.load("/home/data_science/project_files/santhosh/knowledge_distillation_LLM/knowledge_distillation/src/main/distillation/best_model.pt")
+    model.load_state_dict(checkpoint['model_state_dict'])
 
     # Save in HuggingFace format
     save_model_huggingface(model, tokenizer)
