@@ -110,7 +110,7 @@ def show_sql_generations():
 
             outputs = model.generate(
                 **inputs,
-                max_length=256,
+                max_new_tokens=256,
                 temperature=0.0,
                 do_sample=False
             )
