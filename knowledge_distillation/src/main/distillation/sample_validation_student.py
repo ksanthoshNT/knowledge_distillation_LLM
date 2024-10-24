@@ -82,7 +82,7 @@ def show_sql_generations():
     tokenizer = AutoTokenizer.from_pretrained("aspenita/llama-3-sqlcoder-8b-AWQ")
 
     # Load checkpoint
-    checkpoint = torch.load("checkpoints/best_model.pt")
+    checkpoint = torch.load("best_model.pt")
     model.load_state_dict(checkpoint['model_state_dict'])
     torch.save(model.state_dict(), "saved_model.pt")
 
