@@ -51,7 +51,7 @@ def convert_existing_to_huggingface():
     # First, load the original model architecture
     model = AutoModelForCausalLM.from_pretrained(
         "aspenita/llama-3-sqlcoder-8b-AWQ",
-        torch_dtype=torch.float16,
+        torch_dtype=torch.float32,
         device_map="auto"
     )
     tokenizer = AutoTokenizer.from_pretrained("aspenita/llama-3-sqlcoder-8b-AWQ")
@@ -61,12 +61,8 @@ def convert_existing_to_huggingface():
     model.load_state_dict(checkpoint['model_state_dict'])
 
     # Save in HuggingFace format
-    save_model_huggingface(model, tokenizer,save_directory='llama3-8b-awq-distilled-f16')
-
+    save_model_huggingface(model, tokenizer,save_directory='llama3-8b-awq-distilled-f32')
     print("Model and tokenizer saved in HuggingFace format")
-    AutoModelForCausalLM.from_pretrained('llama3-8b-awq-distilled-f16',device_map='auto')
-    AutoTokenizer.from_pretrained('llama3-8b-awq-distilled-f16')
-    print("Loaded model and tokenizer")
 
 
 if __name__ == "__main__":
