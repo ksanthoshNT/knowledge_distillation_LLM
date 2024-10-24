@@ -49,3 +49,33 @@ INFO:__main__:Epoch: 2/3, Step: 1700, Loss: 0.0406
 INFO:__main__:Epoch: 2/3, Step: 1800, Loss: 0.0409
 INFO:__main__:Epoch: 2/3, Step: 1900, Loss: 0.0406
 INFO:__main__:Epoch: 2/3, Step: 2000, Loss: 0.0345
+INFO:__main__:Evaluation completed in 147.34s. Loss: 0.0756
+INFO:__main__:Evaluation metrics: {'eval_loss': 0.07563233879208565}
+INFO:__main__:Saved best model with eval loss 0.0756 to checkpoints/best_model.pt
+INFO:__main__:Epoch: 2/3, Step: 2100, Loss: 0.0491
+INFO:__main__:Epoch: 2/3, Step: 2200, Loss: 0.0315
+INFO:__main__:Epoch: 2/3, Step: 2300, Loss: 0.0362
+INFO:__main__:Epoch: 2/3, Step: 2400, Loss: 0.0368
+INFO:__main__:Epoch: 2/3, Step: 2500, Loss: 0.0449
+INFO:__main__:Evaluation completed in 147.68s. Loss: 0.0747
+INFO:__main__:Evaluation metrics: {'eval_loss': 0.07469375436007976}
+INFO:__main__:Saved checkpoint to checkpoints/checkpoint_epoch_1_step_2500.pt
+INFO:__main__:Epoch 2 completed 3106.15s. Average loss: 0.0403
+INFO:__main__:Epoch: 3/3, Step: 2600, Loss: 0.0333
+INFO:__main__:Epoch: 3/3, Step: 2700, Loss: 0.0414
+INFO:__main__:Epoch: 3/3, Step: 2800, Loss: 0.0284
+INFO:__main__:Epoch: 3/3, Step: 2900, Loss: 0.0269
+INFO:__main__:Epoch: 3/3, Step: 3000, Loss: 0.0259
+INFO:__main__:Evaluation completed in 147.15s. Loss: 0.0716
+INFO:__main__:Evaluation metrics: {'eval_loss': 0.07161302324384451}
+INFO:__main__:Epoch: 3/3, Step: 3100, Loss: 0.0248
+INFO:__main__:Epoch: 3/3, Step: 3200, Loss: 0.0216
+INFO:__main__:Epoch: 3/3, Step: 3300, Loss: 0.0266
+INFO:__main__:Epoch: 3/3, Step: 3400, Loss: 0.0245
+INFO:__main__:Epoch: 3/3, Step: 3500, Loss: 0.0272
+INFO:__main__:Evaluation completed in 147.22s. Loss: 0.0703
+INFO:__main__:Evaluation metrics: {'eval_loss': 0.07033305518329143}
+INFO:__main__:Saved best model with eval loss 0.0703 to checkpoints/best_model.pt
+INFO:__main__:Epoch: 3/3, Step: 3600, Loss: 0.0261
+INFO:__main__:Epoch: 3/3, Step: 3700, Loss: 0.0265
+INFO:__main__:Epoch 3 completed 2910.08s. Average loss: 0.0284
