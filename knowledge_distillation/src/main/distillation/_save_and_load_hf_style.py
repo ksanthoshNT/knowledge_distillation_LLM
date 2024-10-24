@@ -61,7 +61,7 @@ def convert_existing_to_huggingface():
     model.load_state_dict(checkpoint['model_state_dict'])
 
     # Save in HuggingFace format
-    save_model_huggingface(model, tokenizer)
+    save_model_huggingface(model, tokenizer,save_directory='llama3-8b-awq-distilled-f16')
 
 
 if __name__ == "__main__":
