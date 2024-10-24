@@ -114,7 +114,7 @@ def show_sql_generations():
                 **inputs,
                 max_new_tokens=256,
                 temperature=0.0,
-                do_sample=False
+                do_sample=True
             )
 
             generated_sql = tokenizer.decode(outputs[0], skip_special_tokens=True)
