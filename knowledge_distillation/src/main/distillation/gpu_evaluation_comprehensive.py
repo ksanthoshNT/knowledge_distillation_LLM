@@ -64,7 +64,7 @@ class ComprehensiveEvaluator:
         logger.info("Student Model saved !! ")
         return model
 
-    def transform_text(input_string):
+    def transform_text(self,input_string):
 
         def transform_schema(schema):
             tables = re.split(r'\n\s*\n', schema)
