@@ -67,10 +67,10 @@ def convert_existing_to_huggingface():
 
 if __name__ == "__main__":
     # Example 1: Convert existing saved model to HuggingFace format
-    convert_existing_to_huggingface()
+    # convert_existing_to_huggingface()
 
     # Example 2: Load the converted model
-    model, tokenizer = load_model_huggingface()
+    model, tokenizer = load_model_huggingface("llama3-8b-awq-distilled-f32")
 
     # Example usage of loaded model
     question = "What are the total sales by category?"
