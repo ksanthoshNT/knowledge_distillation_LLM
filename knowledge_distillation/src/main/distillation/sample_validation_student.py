@@ -98,9 +98,6 @@ def show_sql_generations():
     for idx in range(5):
         sample = eval_dataset[idx]
         sample['input'] = transform_text(sample['input'])
-        print(f"\nExample {idx + 1}")
-        print("-" * 50)
-        print(f"Input: {sample['input']}")
 
         with torch.no_grad():
             inputs = tokenizer(
@@ -118,7 +115,7 @@ def show_sql_generations():
             )
 
             generated_sql = tokenizer.decode(outputs[0], skip_special_tokens=True)
-            print(f"\nGenerated SQL: {generated_sql}")
+            print(f"\nGenerated SQL: \n{generated_sql}")
             print(f"Ground Truth: {sample['output']}")
 
 
