@@ -85,6 +85,7 @@ def show_sql_generations():
     checkpoint = torch.load("best_model.pt")
     model.load_state_dict(checkpoint['model_state_dict'])
     torch.save(model.state_dict(), "saved_model.pt")
+    print("Model saved")
 
     # Load dataset
     dataset = load_dataset("lamini/spider_text_to_sql")
