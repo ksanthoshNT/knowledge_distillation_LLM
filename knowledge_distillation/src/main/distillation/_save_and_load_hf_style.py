@@ -63,6 +63,11 @@ def convert_existing_to_huggingface():
     # Save in HuggingFace format
     save_model_huggingface(model, tokenizer,save_directory='llama3-8b-awq-distilled-f16')
 
+    print("Model and tokenizer saved in HuggingFace format")
+    AutoModelForCausalLM.from_pretrained('llama3-8b-awq-distilled-f16',device_map='auto')
+    AutoTokenizer.from_pretrained('llama3-8b-awq-distilled-f16')
+    print("Loaded model and tokenizer")
+
 
 if __name__ == "__main__":
     # Example 1: Convert existing saved model to HuggingFace format
