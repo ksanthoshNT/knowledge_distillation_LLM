@@ -58,7 +58,7 @@ class ComprehensiveEvaluator:
             torch_dtype=torch.float16,
             device_map="auto"
         )
-        checkpoint = torch.load("checkpoints/best_model.pt")
+        checkpoint = torch.load("best_model.pt")
         model.load_state_dict(checkpoint['model_state_dict'])
         torch.save(model.state_dict(), "saved_model.pt")
         logger.info("Student Model saved !! ")
