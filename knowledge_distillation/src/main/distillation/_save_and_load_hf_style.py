@@ -70,7 +70,7 @@ if __name__ == "__main__":
     # convert_existing_to_huggingface()
 
     # Example 2: Load the converted model
-    model, tokenizer = load_model_huggingface("llama3-8b-awq-distilled-f32")
+    model, tokenizer = load_model_huggingface("llama3-8b-awq-distilled-f16")
 
     # Example usage of loaded model
     question = "What are the total sales by category?"
