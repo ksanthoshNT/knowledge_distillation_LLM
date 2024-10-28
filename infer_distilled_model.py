@@ -1,14 +1,15 @@
+from torch.xpu import device
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Load model and tokenizer
 model_path = "/home/data_science/project_files/santhosh/knowledge_distillation_LLM/knowledge_distillation/src/main/distillation/llama3-8b-awq-distilled-f32"
-model = AutoModelForCausalLM.from_pretrained(model_path).cuda()
+model = AutoModelForCausalLM.from_pretrained(model_path,device='cpu')
 tokenizer = AutoTokenizer.from_pretrained("aspenita/llama-3-sqlcoder-8b-AWQ")
 
 # Define prompt
 prompt = """<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n        Generate a SQL query to answer this question: `WHAT IS THE PREDICTION OF COLUMN source1_Uid WITH VALUE 9052`\n        Use the provided DDL statements to formulate your query. \n\n        DDL statements:\n        CREATE TABLE jim_ntngai_com_6712016e35c9b20eccb9052b_V1 (\nsource1_year_target BIGINT,\nsource1_Uid BIGINT,\nsource1_age BIGINT,\nsource1_Pid BIGINT,\nsource1_subscribe BIGINT,\nsource1_MARRIAGE BIGINT,\nsource1_EDUCATION BIGINT,\nprobability_0 DOUBLE PRECISION,\nprobability_1 DOUBLE PRECISION,\nprediction BIGINT\n);<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n        The following SQL query best answers the question `WHAT IS THE PREDICTION OF COLUMN source1_Uid WITH VALUE 9052`:\n        ```sql\n"""
 # Tokenize and generate
-inputs = tokenizer(prompt, return_tensors="pt").to('cuda')
+inputs = tokenizer(prompt, return_tensors="pt")
 outputs = model.generate(
     **inputs,
     max_new_tokens=256,
