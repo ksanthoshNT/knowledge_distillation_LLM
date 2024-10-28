@@ -1,48 +1,24 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
-from typing import Dict, Any
-
-app = FastAPI()
 
 # Load model and tokenizer
-MODEL_PATH = "/home/data_science/project_files/santhosh/knowledge_distillation_LLM/knowledge_distillation/src/main/distillation/llama3-8b-awq-distilled-f32"
-model = AutoModelForCausalLM.from_pretrained(MODEL_PATH).cuda()
+model_path = "/home/data_science/project_files/santhosh/knowledge_distillation_LLM/knowledge_distillation/src/main/distillation/llama3-8b-awq-distilled-f32"
+model = AutoModelForCausalLM.from_pretrained(model_path).cuda()
 tokenizer = AutoTokenizer.from_pretrained("aspenita/llama-3-sqlcoder-8b-AWQ")
 
+# Define prompt
+prompt = """<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n        Generate a SQL query to answer this question: `WHAT IS THE PREDICTION OF COLUMN source1_Uid WITH VALUE 9052`\n        Use the provided DDL statements to formulate your query. \n\n        DDL statements:\n        CREATE TABLE jim_ntngai_com_6712016e35c9b20eccb9052b_V1 (\nsource1_year_target BIGINT,\nsource1_Uid BIGINT,\nsource1_age BIGINT,\nsource1_Pid BIGINT,\nsource1_subscribe BIGINT,\nsource1_MARRIAGE BIGINT,\nsource1_EDUCATION BIGINT,\nprobability_0 DOUBLE PRECISION,\nprobability_1 DOUBLE PRECISION,\nprediction BIGINT\n);<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n        The following SQL query best answers the question `WHAT IS THE PREDICTION OF COLUMN source1_Uid WITH VALUE 9052`:\n        ```sql\n"""
+# Tokenize and generate
+inputs = tokenizer(prompt, return_tensors="pt").to('cuda')
+outputs = model.generate(
+    **inputs,
+    max_new_tokens=256,
+    do_sample=False,
+    temperature=0.0,
+    top_k=40,
+    top_p=0.95,
+    repetition_penalty=1.1
+)
 
-class GenerateRequest(BaseModel):
-    model: str
-    prompt: str
-    options: Dict[str, Any]
-
-
-@app.post("/api/generate")
-async def generate(request: GenerateRequest):
-    inputs = tokenizer(request.prompt, return_tensors="pt").to('cuda')
-
-    generate_kwargs = {
-        'max_new_tokens': request.options.get('num_predict', 5),
-        'do_sample': request.options.get('do_sample', False),
-        'temperature': request.options.get('temperature', 0.0),
-        'top_k': request.options.get('top_k', 40),
-        'top_p': request.options.get('top_p', 0.95),
-        'repetition_penalty': request.options.get('repeat_penalty', 1.1)
-    }
-
-    outputs = model.generate(**inputs, **generate_kwargs)
-    result = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-    return {
-        "model": request.model,
-        "prompt": request.prompt,
-        "response": result,
-        "done": True
-    }
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=11435)
+# Decode and print result
+result = tokenizer.decode(outputs[0], skip_special_tokens=True)
+print(result)
