@@ -23,16 +23,15 @@ prompt = """<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n       
 inputs = tokenizer(prompt, return_tensors="pt").to('cpu')
 
 # Generate
-with torch.no_grad():
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=256,
-        do_sample=True,
-        temperature=0.7,
-        top_k=40,
-        top_p=0.95,
-        repetition_penalty=1.1
-    )
+outputs = model.generate(
+    **inputs,
+    max_new_tokens=256,
+    do_sample=True,
+    temperature=0.7,
+    top_k=40,
+    top_p=0.95,
+    repetition_penalty=1.1
+)
 
 # Decode and print result
 result = tokenizer.decode(outputs[0], skip_special_tokens=True)
