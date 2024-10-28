@@ -20,7 +20,7 @@ tokenizer = AutoTokenizer.from_pretrained("aspenita/llama-3-sqlcoder-8b-AWQ")
 prompt = """<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n        Generate a SQL query to answer this question: `WHAT IS THE PREDICTION OF COLUMN source1_Uid WITH VALUE 9052`\n        Use the provided DDL statements to formulate your query. \n\n        DDL statements:\n        CREATE TABLE jim_ntngai_com_6712016e35c9b20eccb9052b_V1 (\nsource1_year_target BIGINT,\nsource1_Uid BIGINT,\nsource1_age BIGINT,\nsource1_Pid BIGINT,\nsource1_subscribe BIGINT,\nsource1_MARRIAGE BIGINT,\nsource1_EDUCATION BIGINT,\nprobability_0 DOUBLE PRECISION,\nprobability_1 DOUBLE PRECISION,\nprediction BIGINT\n);<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n        The following SQL query best answers the question `WHAT IS THE PREDICTION OF COLUMN source1_Uid WITH VALUE 9052`:\n        ```sql\n"""
 
 # Tokenize
-inputs = tokenizer(prompt, return_tensors="pt")
+inputs = tokenizer(prompt, return_tensors="pt").to('cpu')
 
 # Generate
 with torch.no_grad():
