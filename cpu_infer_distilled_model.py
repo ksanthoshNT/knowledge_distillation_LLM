@@ -5,14 +5,13 @@ import torch
 model_path = "/home/data_science/project_files/santhosh/knowledge_distillation_LLM/knowledge_distillation/src/main/distillation/llama3-8b-awq-distilled-f32"
 
 # Create AWQ config for CPU
-# quantization_config = AwqConfig(version="ipex")
+quantization_config = AwqConfig()
 
 # Load model with CPU configuration
 model = AutoModelForCausalLM.from_pretrained(
     model_path,
-    # quantization_config=quantization_config,
-    device_map="cpu",
-    torch_dtype=torch.float32
+    quantization_config=quantization_config,
+    device_map="cpu"
 )
 tokenizer = AutoTokenizer.from_pretrained("aspenita/llama-3-sqlcoder-8b-AWQ")
 
