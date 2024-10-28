@@ -2,17 +2,17 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from awq import AutoAWQForCausalLM
 
+from gpu_infer_distilled_model import model
 
 # Load model and tokenizer
 model_path = "/home/data_science/project_files/santhosh/knowledge_distillation_LLM/knowledge_distillation/src/main/distillation/llama3-8b-awq-distilled-f32"
+cpu_local_path = "/home/ntlpt59/Documents/Datasets/models/llama3-8b-awq-distilled-f32"
 
 
 
 # Load model with CPU configuration
 model = AutoAWQForCausalLM.from_pretrained(
-    model_path,
-    device_map="cpu"
-)
+    model_path)
 tokenizer = AutoTokenizer.from_pretrained("aspenita/llama-3-sqlcoder-8b-AWQ")
 
 # Define prompt
