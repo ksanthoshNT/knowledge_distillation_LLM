@@ -5,7 +5,7 @@ import torch
 model_path = "/home/data_science/project_files/santhosh/knowledge_distillation_LLM/knowledge_distillation/src/main/distillation/llama3-8b-awq-distilled-f32"
 
 # Create AWQ config for CPU
-quantization_config = AwqConfig(version="ipex")
+# quantization_config = AwqConfig(version="ipex")
 
 # Load model with CPU configuration
 model = AutoModelForCausalLM.from_pretrained(
