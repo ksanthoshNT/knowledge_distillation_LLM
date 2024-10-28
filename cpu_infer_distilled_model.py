@@ -1,16 +1,16 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer, AwqConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
+from awq import AutoAWQForCausalLM
+
 
 # Load model and tokenizer
 model_path = "/home/data_science/project_files/santhosh/knowledge_distillation_LLM/knowledge_distillation/src/main/distillation/llama3-8b-awq-distilled-f32"
 
-# Create AWQ config for CPU
-quantization_config = AwqConfig()
+
 
 # Load model with CPU configuration
-model = AutoModelForCausalLM.from_pretrained(
+model = AutoAWQForCausalLM.from_pretrained(
     model_path,
-    quantization_config=quantization_config,
     device_map="cpu"
 )
 tokenizer = AutoTokenizer.from_pretrained("aspenita/llama-3-sqlcoder-8b-AWQ")
