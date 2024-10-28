@@ -10,8 +10,9 @@ quantization_config = AwqConfig(version="ipex")
 # Load model with CPU configuration
 model = AutoModelForCausalLM.from_pretrained(
     model_path,
-    quantization_config=quantization_config,
-    device_map="cpu"
+    # quantization_config=quantization_config,
+    device_map="cpu",
+    torch_dtype=torch.float32
 )
 tokenizer = AutoTokenizer.from_pretrained("aspenita/llama-3-sqlcoder-8b-AWQ")
 
